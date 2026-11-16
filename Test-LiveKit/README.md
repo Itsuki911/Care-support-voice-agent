@@ -18,7 +18,9 @@ uv sync
 Copy-Item .env.example .env
 ```
 
-`.env` を編集し、LiveKit Cloud プロジェクトの `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET`、OpenRouter の `OPENROUTER_API_KEY`、およびモデルを設定してください。LLM の `OPENROUTER_MODEL` は OpenRouter のモデル ID（例: `anthropic/claude-sonnet-4.5`）です。`STT_MODEL` と `TTS_MODEL` は LiveKit Inference の `provider/model` 形式、`TTS_VOICE` は選択した TTS プロバイダーの音声 ID です。
+`.env` を編集し、OpenRouter の `OPENROUTER_API_KEY` と `OPENROUTER_MODEL` を設定してください。LLM の `OPENROUTER_MODEL` は OpenRouter のモデル ID（例: `anthropic/claude-haiku-5.5`）です。テキスト専用コンソールでは、この 2 つだけで起動できます。
+
+音声モードには、LiveKit Cloud プロジェクトの `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET` と、LiveKit Inference の `STT_MODEL`、`TTS_MODEL`、`TTS_VOICE` が必要です。`STT_MODEL` と `TTS_MODEL` は `provider/model` 形式、`TTS_VOICE` は選択した TTS プロバイダーの音声 ID です。
 
 `OPENROUTER_API_KEY` は必ずローカルの `.env` にのみ置いてください。すでに `.env.example` にキーを貼り付けた場合は、上記のコピー後に `.env.example` 側の値を空に戻してください。キーが共有済み・履歴に残った可能性がある場合は、OpenRouter 側でローテーションしてください。
 
@@ -58,7 +60,13 @@ lk agent dev
 - [OpenRouter LLM plugin guide](https://docs.livekit.io/agents/models/llm/openrouter/)
 - [LiveKit CLI](https://docs.livekit.io/intro/basics/cli/)
 
-LiveKit CLI は公式の Windows 手順 `winget install LiveKit.LiveKitCLI` で導入済みです。新しい PowerShell を開くと `lk` を利用できます。Cloud プロジェクトへサインインする場合は `lk cloud auth` を使います。CLI があれば、Cloud の資格情報を `.env.local` に書き出す `lk app env -w` も利用できます。なお、このサンプルは Python の `python-dotenv` が読む `.env` を採用しています。
+LiveKit CLI が未導入の場合は、公式の Windows 手順で導入してください。
+
+```powershell
+winget install LiveKit.LiveKitCLI
+```
+
+導入後は PowerShell を開き直し、`lk --version` で確認できます。Cloud プロジェクトへサインインする場合は `lk cloud auth` を使います。CLI があれば、Cloud の資格情報を `.env.local` に書き出す `lk app env -w` も利用できます。なお、このサンプルは Python の `python-dotenv` が読む `.env` を採用しています。
 
 `lk` を使わず Python から直接起動することもできます。
 

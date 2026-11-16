@@ -25,19 +25,13 @@ class Settings:
     """Configuration deliberately kept in environment variables, not source code."""
 
     openrouter_model: str
-    stt_model: str
-    tts_model: str
-    tts_voice: str
+    stt_model: str | None
+    tts_model: str | None
+    tts_voice: str | None
 
     @classmethod
     def from_env(cls) -> "Settings":
-        names = (
-            "OPENROUTER_API_KEY",
-            "OPENROUTER_MODEL",
-            "STT_MODEL",
-            "TTS_MODEL",
-            "TTS_VOICE",
-        )
+        names = ("OPENROUTER_API_KEY", "OPENROUTER_MODEL")
         missing = [name for name in names if not os.getenv(name)]
         if missing:
             raise RuntimeError(
@@ -45,12 +39,25 @@ class Settings:
                 + ", ".join(missing)
                 + ". Copy .env.example to .env and set your model values."
             )
+
+        speech_names = ("STT_MODEL", "TTS_MODEL", "TTS_VOICE")
+        configured_speech = [name for name in speech_names if os.getenv(name)]
+        if configured_speech and len(configured_speech) != len(speech_names):
+            raise RuntimeError(
+                "Voice mode needs all of STT_MODEL, TTS_MODEL, and TTS_VOICE. "
+                "Leave all three blank to use text-only console mode."
+            )
+
         return cls(
             openrouter_model=os.environ["OPENROUTER_MODEL"],
-            stt_model=os.environ["STT_MODEL"],
-            tts_model=os.environ["TTS_MODEL"],
-            tts_voice=os.environ["TTS_VOICE"],
+            stt_model=os.getenv("STT_MODEL") or None,
+            tts_model=os.getenv("TTS_MODEL") or None,
+            tts_voice=os.getenv("TTS_VOICE") or None,
         )
+
+    @property
+    def voice_enabled(self) -> bool:
+        return self.stt_model is not None
 
 
 class TerminalAssistant(Agent):
@@ -71,13 +78,18 @@ async def entrypoint(ctx: JobContext) -> None:
     """Create one realtime voice session for a LiveKit room or local console."""
     settings = Settings.from_env()
 
-    session = AgentSession(
-        # Speech is handled by LiveKit Inference; the LLM is sent to OpenRouter.
-        stt=inference.STT(settings.stt_model),
-        llm=openai.LLM.with_openrouter(model=settings.openrouter_model),
-        tts=inference.TTS(settings.tts_model, voice=settings.tts_voice),
-        vad=inference.VAD(),
-    )
+    # The LLM is sent to OpenRouter. Add speech components only when all voice
+    # settings are configured, so `lk agent console --text` works with an LLM alone.
+    session_options = {
+        "llm": openai.LLM.with_openrouter(model=settings.openrouter_model),
+    }
+    if settings.voice_enabled:
+        session_options.update(
+            stt=inference.STT(settings.stt_model),
+            tts=inference.TTS(settings.tts_model, voice=settings.tts_voice),
+            vad=inference.VAD(),
+        )
+    session = AgentSession(**session_options)
 
     await session.start(agent=TerminalAssistant(), room=ctx.room)
     await session.generate_reply(
