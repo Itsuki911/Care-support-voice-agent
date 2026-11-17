@@ -9,6 +9,8 @@ dependencies = [
     "python-dotenv>=1.1,<2",
     "fastapi>=0.115,<1",
     "uvicorn>=0.34,<1",
+    "google-api-python-client>=2.160,<3",
+    "google-auth-oauthlib>=1.2,<2",
 ]
 
 [dependency-groups]
