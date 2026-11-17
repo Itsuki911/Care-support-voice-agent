@@ -1,0 +1,19 @@
+# Local-only example. Copy to .dev.vars; never commit a populated file.
+LIVEKIT_URL=wss://your-project.livekit.cloud
+LIVEKIT_API_KEY=
+LIVEKIT_API_SECRET=
+OPENROUTER_API_KEY=
+OPENROUTER_MODEL=anthropic/claude-haiku-5.5
+
+# Optional speech / observability / Gmail OAuth settings.
+STT_MODEL=
+TTS_MODEL=
+TTS_VOICE=
+LANGFUSE_PUBLIC_KEY=
+LANGFUSE_SECRET_KEY=
+LANGFUSE_BASE_URL=https://jp.cloud.langfuse.com
+LANGFUSE_TRACING_ENABLED=true
+LANGFUSE_TRACING_ENVIRONMENT=production
+LANGFUSE_RELEASE=
+GMAIL_CLIENT_SECRET_JSON_B64=
+GMAIL_TOKEN_JSON_B64=

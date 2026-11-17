@@ -1,0 +1,13 @@
+.git
+.github
+.vscode
+.pytest_cache
+**/__pycache__
+**/.pytest_cache
+Test-LiveKit/.venv
+Test-LiveKit/.env
+Test-LiveKit/.secrets
+fronted-test/node_modules
+fronted-test/dist
+cloudflare/node_modules
+cloudflare/.wrangler
