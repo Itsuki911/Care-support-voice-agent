@@ -6,3 +6,7 @@ __pycache__/
 *.py[cod]
 recordings/
 .pytest_cache/
+
+.secrets/
+credentials.json
+token.json
