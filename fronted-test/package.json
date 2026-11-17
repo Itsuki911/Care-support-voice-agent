@@ -1,0 +1,9 @@
+{
+  "name": "fronted-test",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {"dev": "vite --host localhost", "build": "tsc --noEmit && vite build"},
+  "dependencies": {"livekit-client": "^2.24.0"},
+  "devDependencies": {"typescript": "^5.9.0", "vite": "^7.2.0"}
+}

@@ -1,5 +1,7 @@
 # Test-LiveKit
 
+ブラウザから音声会話を試す場合は、[fronted-test の手順](../fronted-test/README.md)を参照してください。
+
 LiveKit Agents をターミナルから試す最小の Python 例です。コードは現行の LiveKit Agents API (`AgentServer`, `AgentSession`, `cli.run_app`) を使用します。LLM は OpenRouter 経由、音声認識・音声合成（STT/TTS）は LiveKit Inference 経由です。
 
 ## 1. 依存関係を準備する
