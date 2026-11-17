@@ -1,5 +1,5 @@
 version = 1
-revision = 5
+revision = 3
 requires-python = ">=3.10, <3.14"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -2449,6 +2449,8 @@ dependencies = [
     { name = "google-api-python-client" },
     { name = "google-auth-oauthlib" },
     { name = "livekit-agents", extra = ["openai"] },
+    { name = "opentelemetry-exporter-otlp-proto-http" },
+    { name = "opentelemetry-sdk" },
     { name = "python-dotenv" },
     { name = "uvicorn" },
 ]
@@ -2465,6 +2467,8 @@ requires-dist = [
     { name = "google-api-python-client", specifier = ">=2.160,<3" },
     { name = "google-auth-oauthlib", specifier = ">=1.2,<2" },
     { name = "livekit-agents", extras = ["openai"], specifier = "~=1.8" },
+    { name = "opentelemetry-exporter-otlp-proto-http", specifier = ">=1.28,<2" },
+    { name = "opentelemetry-sdk", specifier = ">=1.28,<2" },
     { name = "python-dotenv", specifier = ">=1.1,<2" },
     { name = "uvicorn", specifier = ">=0.34,<1" },
 ]

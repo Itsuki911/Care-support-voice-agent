@@ -9,6 +9,7 @@ Run it with the local microphone and speakers:
 
 from __future__ import annotations
 
+import asyncio
 import os
 from dataclasses import dataclass
 
@@ -19,6 +20,7 @@ from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli, in
 from livekit.plugins import openai
 
 from gmail_tools import GmailTools
+from observability import flush_traces, setup_langfuse
 
 
 # override=False により、OS 側で明示的に指定した環境変数を .env で上書きしない。
@@ -99,6 +101,19 @@ server = AgentServer()
 async def entrypoint(ctx: JobContext) -> None:
     """LiveKit のルームまたはローカル console 用に、1 会話セッションを作る。"""
     settings = Settings.from_env()
+
+    # Start tracing before the session so LiveKit's complete conversation trace
+    # reaches Langfuse and LiveKit Agent Insights. Missing Langfuse settings only
+    # disable the external exporter; they never prevent the agent from starting.
+    trace_provider = setup_langfuse(ctx.room.name)
+    if trace_provider is not None:
+        # JobContext の終了コールバックは await 可能な関数を要求する。
+        # exporter の flush は同期・ブロッキング処理なので、イベントループを
+        # 止めないようワーカースレッドで実行する。
+        async def flush_langfuse_traces() -> None:
+            await asyncio.to_thread(flush_traces, trace_provider)
+
+        ctx.add_shutdown_callback(flush_langfuse_traces)
 
     # OpenRouter は OpenAI 互換の Chat Completions API を提供している。
     # LiveKit の OpenAI プラグイン経由で接続するため、API キーは

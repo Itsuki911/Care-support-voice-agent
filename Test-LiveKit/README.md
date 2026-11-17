@@ -28,6 +28,31 @@ Copy-Item .env.example .env
 
 OpenRouter 接続には LiveKit の OpenAI プラグインを使用します。API キーを Git に追加しないでください（`.env` は除外済みです）。OpenRouter のモデル一覧は [OpenRouter Models](https://openrouter.ai/models)、LiveKit の連携仕様は [OpenRouter LLM plugin guide](https://docs.livekit.io/agents/models/llm/openrouter/) を参照してください。
 
+## 監視: LiveKit Insights と Langfuse
+
+LiveKit Cloud の Agent Insights は、同じ LiveKit プロジェクトに接続したエージェントのトランスクリプト、トレース、ログ、メトリクスを確認できます。加えて、このエージェントは OpenTelemetry トレースを Langfuse へ送信できます。
+
+Langfuse を有効にするには、`.env` に以下を設定します。
+
+```env
+LANGFUSE_PUBLIC_KEY=pk-lf-...
+LANGFUSE_SECRET_KEY=sk-lf-...
+LANGFUSE_BASE_URL=https://jp.cloud.langfuse.com
+LANGFUSE_TRACING_ENABLED=true
+LANGFUSE_TRACING_ENVIRONMENT=development
+LANGFUSE_RELEASE=local
+```
+
+各 LiveKit ルームは Langfuse の `langfuse.session.id` として記録されます。Langfuse 側にはモデル名、レイテンシ、トークン使用量、ツールの成否、エラーを送ります。一方で、Gmail 本文、会話本文、参加者 ID、ツール引数・出力などの PII は Langfuse へ送信しません。LiveKit Cloud 側の保存内容は、プロジェクトの PII redaction 設定に従います。
+
+一時的に Langfuse 送信を止める場合は、以下を設定します。
+
+```env
+LANGFUSE_TRACING_ENABLED=false
+```
+
+詳細は [LiveKit OpenTelemetry traces](https://docs.livekit.io/testing/observability/tracing/) と [Langfuse SDK configuration](https://langfuse.com/docs/observability/sdk/overview) を参照してください。
+
 ## 3. ターミナルで試す
 
 テキストだけで対話する場合:

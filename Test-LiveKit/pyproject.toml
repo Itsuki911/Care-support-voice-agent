@@ -11,6 +11,8 @@ dependencies = [
     "uvicorn>=0.34,<1",
     "google-api-python-client>=2.160,<3",
     "google-auth-oauthlib>=1.2,<2",
+    "opentelemetry-sdk>=1.28,<2",
+    "opentelemetry-exporter-otlp-proto-http>=1.28,<2",
 ]
 
 [dependency-groups]

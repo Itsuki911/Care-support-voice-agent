@@ -1,6 +1,7 @@
 import asyncio
 import base64
 import json
+import os
 import socket
 import threading
 from email import policy
@@ -227,7 +228,10 @@ def test_auth_save_atomic_permissions_and_overwrite(tmp_path):
     gmail_auth.save_token(path, '{"test":1}')
     gmail_auth.save_token(path, '{"test":2}')
     assert json.loads(path.read_text()) == {'test': 2}
-    assert path.stat().st_mode & 0o777 == 0o600
+    # Windows の ACL は POSIX の 0600 モード値へ対応付けられない。
+    # Unix 系では秘密トークンの所有者専用パーミッションを検証する。
+    if os.name != 'nt':
+        assert path.stat().st_mode & 0o777 == 0o600
     assert list(path.parent.iterdir()) == [path]
 
 
