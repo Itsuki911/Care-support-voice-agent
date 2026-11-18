@@ -1,6 +1,6 @@
 # 汎用Voice Agent 開発計画
 
-更新日: 2026-11-17
+更新日: 2026-11-18
 
 本計画はユーザーとのブラッシュアップで合意した要件を記録する。機能実装の完了報告ではない。
 確認したmainの基準コミット: `d5df061`（Cloudflare Containers deployment pipeline）。
@@ -19,6 +19,16 @@
 
 1. [段階別計画](./roadmap.md): レベル0〜4の内容、完了条件、依存関係。
 2. [検証方針](./validation.md): 自動テスト、実接続テスト、比較評価。
+
+## フロントエンドの採用技術（レベル1・4）
+
+- レベル1の会話表示とレベル4の処理状況表示には **assistant-ui** を採用する。
+- 正式なGitHub URL: https://github.com/assistant-ui/assistant-ui
+- 公式ドキュメント: https://www.assistant-ui.com/docs
+- GoogleのリダイレクトURLではなく、上記の直接URLを参照する（2026-11-18確認）。
+- `fronted-test`内の既存Vite・TypeScript構成へReactを導入し、`@assistant-ui/react`で画面を構築する。
+- 音声通信・音声処理はLiveKitと既存Python agentを継続利用し、assistant-uiには会話とツール状態の表示を担当させる。
+- 本変更は採用方針の記録であり、ライブラリ導入・画面実装は各レベルで行う。
 
 ## 合意した会話方針
 
