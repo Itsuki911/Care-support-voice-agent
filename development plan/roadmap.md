@@ -57,6 +57,9 @@ Langfuse上の合計を請求額そのものと見なさず、サービス側の
 
 ### 実装
 
+- UI基盤は[assistant-ui](https://github.com/assistant-ui/assistant-ui)（React・TypeScript）とする。`fronted-test`内でReactを導入し、既存の起動・停止と音声接続を維持する。
+- LiveKitの文字起こし・会話イベントをassistant-uiのメッセージへ変換するアダプターを実装する。独自状態を接続できる[ExternalStoreRuntime等のCustom Runtime](https://www.assistant-ui.com/docs/runtimes/custom/overview)を第一候補とし、採用APIは実装時のバージョンで確認する。
+- assistant-uiを追加するだけでLiveKitと自動接続できるとは想定しない。LLMへの別経路の呼び出しや、ブラウザ側STT/TTSによる音声処理の二重化を避ける。
 - ユーザーとAI双方の発言をチャット形式で表示する。
 - 途中認識は同じ発言を更新し、確定発言を履歴にする。途中認識のたびに行を追加しない。
 - AIの生成したテキストと、実際に読み上げたテキストを区別し、割り込みを反映する。
@@ -131,6 +134,9 @@ Markdownでの成功後、自然言語を扱うファイル形式へ対象を広
 
 ### 実装
 
+- レベル1で導入したassistant-uiを継続利用し、[Tool UI](https://www.assistant-ui.com/docs/tools/tool-ui)とカスタム表示でツールの進捗・結果・承認操作を表現する。
+- LiveKit経由の処理イベントを、assistant-ui側の実行ID・表示状態に対応付ける。UIライブラリが通信・承認・実行を自動で保証するとは想定せず、バックエンドの実状態を表示する。
+- 承認UIから許可/拒否を送る場合も、レベル0のバックエンド承認検証を必ず経由する。ツール実行やAPIキーをフロントエンドへ移さない。
 - 「記憶を確認中」「文書を検索中」「取得内容を確認中」「Web検索中」「回答中」を実処理に対応して表示する。
 - 承認待ち・拒否・完了・失敗・キャンセルも区別する。
 - 内部思考を表示せず、開始/終了イベントと結果の状態を表示する。
@@ -147,6 +153,10 @@ Markdownでの成功後、自然言語を扱うファイル形式へ対象を広
 
 ## 公式資料
 
+- [assistant-ui GitHub（正式URL）](https://github.com/assistant-ui/assistant-ui)
+- [assistant-ui Documentation](https://www.assistant-ui.com/docs)
+- [assistant-ui Custom Runtime](https://www.assistant-ui.com/docs/runtimes/custom/overview)
+- [assistant-ui Tool UI](https://www.assistant-ui.com/docs/tools/tool-ui)
 - [LiveKit OpenTelemetry traces](https://docs.livekit.io/testing/observability/tracing/)
 - [LiveKit Function tools](https://docs.livekit.io/agents/logic/tools/definition/)
 - [Langfuse LiveKit integration](https://langfuse.com/integrations/frameworks/livekit)
