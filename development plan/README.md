@@ -23,11 +23,15 @@
 ## フロントエンドの採用技術（レベル1・4）
 
 - レベル1の会話表示とレベル4の処理状況表示には **assistant-ui** を採用する。
+- フロントエンドは **Vercel AI SDK（AI SDK UI）とassistant-uiを併用**する。「verve AI SDK」はVercel AI SDKとして記録する。
 - 正式なGitHub URL: https://github.com/assistant-ui/assistant-ui
 - 公式ドキュメント: https://www.assistant-ui.com/docs
 - GoogleのリダイレクトURLではなく、上記の直接URLを参照する（2026-11-18確認）。
 - `fronted-test`内の既存Vite・TypeScript構成へReactを導入し、`@assistant-ui/react`で画面を構築する。
 - 音声通信・音声処理はLiveKitと既存Python agentを継続利用し、assistant-uiには会話とツール状態の表示を担当させる。
+- Vercel AI SDKはメッセージ形式・ストリーム状態・カスタム通信の連携に使い、`@assistant-ui/ai-sdk`を接続の第一候補とする。音声・LLM・ツールの実行主体は既存Python agentを維持し、LLMの二重呼び出しを避ける。
+- Vercel AI SDK公式GitHub: https://github.com/vercel/ai ／公式ドキュメント: https://ai-sdk.dev/docs
+- SDKの採用によってVercelへのホスティング移行を必須にしない。ローカル検証・既存Cloudflare構成を前提に実装時の適合性を確認する。
 - 本変更は採用方針の記録であり、ライブラリ導入・画面実装は各レベルで行う。
 
 ## 合意した会話方針
