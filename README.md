@@ -5,8 +5,8 @@
 ## 機能検証用 URL
 
 現在、ブラウザ側の機能検証には Cloudflare を使用しています。検証用 URL は次のとおりです。
-
-- [https://care-support-voice-agent.neymar020510.workers.dev/](https://care-support-voice-agent.neymar020510.workers.dev/)
+https://care-support-voice-agent.neymar020510.workers.dev/
+- [](https://care-support-voice-agent.neymar020510.workers.dev/)
 
 この URL は機能検証段階の環境です。恒久的な本番 URL・可用性・データ保存方針を保証するものではありません。Cloudflare へのデプロイ設定やシークレットは、このリポジトリには含めません。
 
@@ -110,50 +110,6 @@ npm run dev
 
 表示された `http://localhost:5173` を開き、マイクの使用を許可して接続を試します。ハウリング防止のため、イヤホンの利用を推奨します。
 
-## Cloudflareへのデプロイ（Workers + Containers）
-
-ブラウザ UI とトークン発行は Cloudflare Workers で、常駐する Python 製 LiveKit Agent は Cloudflare Containers で動作します。`/api/token` は Worker 内でのみ実行され、LiveKit API secret や OpenRouter API key はブラウザへ送信しません。5分ごとの内部ヘルスチェックでコンテナをウォームアップし、初回の会話接続でも Agent を利用可能な状態に保ちます。
-
-> これらのファイルをデプロイするまで、現在の公開 URL は静的フロントエンドのみです。`POST /api/token` が 404 の間はスマートフォンから会話を起動できません。
-
-### GitHub Secrets（CI/CDのデプロイ認証用）
-
-GitHub リポジトリの **Settings → Secrets and variables → Actions** に次の2つを登録します。
-
-- `CLOUDFLARE_API_TOKEN`
-- `CLOUDFLARE_ACCOUNT_ID`
-
-`main` への push で、Pythonテスト・フロントエンドビルド・Worker型検査が成功した場合のみ、Cloudflareへデプロイされます。
-
-### Cloudflareのruntime secrets（Agentとトークン発行用）
-
-最初のデプロイ後、Cloudflare Dashboard の **Workers & Pages → care-support-voice-agent → Settings → Variables and Secrets** で、以下を **Secret** として登録します。または `cloudflare/` から `npx wrangler secret put 変数名 --config ../wrangler.jsonc` で登録できます。
-
-```text
-LIVEKIT_URL
-LIVEKIT_API_KEY
-LIVEKIT_API_SECRET
-OPENROUTER_API_KEY
-OPENROUTER_MODEL
-```
-
-音声会話を使う場合は、これら3つも同時に設定します。
-
-```text
-STT_MODEL
-TTS_MODEL
-TTS_VOICE
-```
-
-Langfuse を使う場合は `LANGFUSE_PUBLIC_KEY`、`LANGFUSE_SECRET_KEY`、`LANGFUSE_BASE_URL`、`LANGFUSE_TRACING_ENABLED`、`LANGFUSE_TRACING_ENVIRONMENT`、`LANGFUSE_RELEASE` を追加します。Gmailをコンテナで有効にする場合は、OAuth client JSON と token JSON をBase64化して、`GMAIL_CLIENT_SECRET_JSON_B64` と `GMAIL_TOKEN_JSON_B64` に設定します。JSONファイルはGitへコミットしません。
-
-```powershell
-[Convert]::ToBase64String([IO.File]::ReadAllBytes(".secrets\gmail-client.json"))
-[Convert]::ToBase64String([IO.File]::ReadAllBytes(".secrets\gmail-token.json"))
-```
-
-Cloudflare向けの実行用設定例は [`cloudflare/.dev.vars.example`](./cloudflare/.dev.vars.example)、Worker/コンテナ設定は [`wrangler.jsonc`](./wrangler.jsonc) にあります。
-
 ## テスト
 
 ```powershell
@@ -164,12 +120,6 @@ uv run --locked pytest -q
 ```powershell
 cd fronted-test
 npm run build
-```
-
-```powershell
-cd cloudflare
-npm ci
-npm run check
 ```
 
 テストでは外部 API、実際の Gmail アカウント、マイクは使用しません。実環境での音声会話・Gmail 操作には、各サービスの有効な認証情報が必要です。

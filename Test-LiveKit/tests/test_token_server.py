@@ -35,7 +35,7 @@ def test_token_signature_grants_and_expiry(client):
     assert grant["room"].startswith("frontend-test-")
     assert grant["canPublishSources"] == ["microphone"]
     assert grant["canSubscribe"] is True
-    assert grant["canPublishData"] is False
+    assert grant["canPublishData"] is True
     assert not grant.get("roomAdmin", False)
 
 

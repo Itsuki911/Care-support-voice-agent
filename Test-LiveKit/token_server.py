@@ -43,7 +43,7 @@ def create_token(request: Request, response: Response) -> dict[str, str]:
                 room=room,
                 can_publish=True,
                 can_subscribe=True,
-                can_publish_data=False,
+                can_publish_data=True,
                 can_publish_sources=["microphone"],
             )
         )
