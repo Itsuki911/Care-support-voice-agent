@@ -109,6 +109,16 @@ def unbind_session_context(token: contextvars.Token[dict[str, Any] | None]) -> N
     _SESSION_ATTRS.reset(token)
 
 
+def _allow_pii() -> bool:
+    """Return whether conversational/tool payloads may be exported to Langfuse."""
+    return os.getenv("LANGFUSE_ALLOW_PII", "false").strip().lower() in {
+        "1",
+        "true",
+        "yes",
+        "on",
+    }
+
+
 def _is_enabled() -> bool:
     """Return whether Langfuse exporting is explicitly enabled."""
     return os.getenv("LANGFUSE_TRACING_ENABLED", "true").strip().lower() not in {
@@ -181,7 +191,7 @@ def setup_langfuse(
         if release:
             metadata["langfuse.release"] = release
 
-        set_tracer_provider(provider, metadata=metadata, allow_pii=False)
+        set_tracer_provider(provider, metadata=metadata, allow_pii=_allow_pii())
         if isinstance(provider, _SDK_TRACER_PROVIDER):
             _SHARED_PROVIDER = provider
         logger.info("Langfuse trace exporter configured", extra={"session_id": session_id})
