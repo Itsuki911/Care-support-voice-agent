@@ -160,6 +160,33 @@ describe('applyTranscriptEvent', () => {
     expect(messages).toHaveLength(2);
     expect(messages[1].metadata?.status).toBe('final');
   });
+
+  it('reconciles optimistic client text message with authoritative server transcript_event without duplication', () => {
+    let messages: VoiceUIMessage[] = [
+      {
+        id: 'client-msg-1',
+        role: 'user',
+        parts: [{ type: 'text', text: 'テキストセッションの質問です' }],
+      },
+    ];
+    const serverCommit: TranscriptEvent = {
+      type: 'transcript_event',
+      session_id: 'frontend-test-text-1',
+      turn_id: 'turn-1',
+      utterance_id: 'item_user_1',
+      seq: 1,
+      speaker: 'user',
+      timestamp: 200,
+      status: 'final',
+      text: 'テキストセッションの質問です',
+    };
+
+    messages = applyTranscriptEvent(messages, serverCommit, 'frontend-test-text-1');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].metadata?.status).toBe('final');
+    expect(messages[0].metadata?.utteranceId).toBe('item_user_1');
+    expect(messages[0].metadata?.turnId).toBe('turn-1');
+  });
 });
 
 describe('applyStatusEvent', () => {

@@ -79,3 +79,17 @@ def test_multi_segment_user_turn_and_commit_share_single_utterance_id():
     assert next_turn is not None
     assert next_turn["turn_id"] == "turn-2"
     assert next_turn["utterance_id"] != utterance_id
+
+
+def test_text_only_turns_advance_turn_id_without_stt():
+    tracker = TranscriptEventTracker(session_id="frontend-test-text-1")
+    u1 = tracker.on_conversation_item_added(role="user", text="最初のテキスト質問", item_id="item_u1", timestamp=1.0)
+    a1 = tracker.on_conversation_item_added(role="assistant", text="最初の回答です。", item_id="item_a1", timestamp=2.0)
+    u2 = tracker.on_conversation_item_added(role="user", text="2回目のテキスト質問", item_id="item_u2", timestamp=3.0)
+
+    assert u1 and a1 and u2
+    assert u1["turn_id"] == "turn-1"
+    assert a1["turn_id"] == "turn-1"
+    assert u2["turn_id"] == "turn-2"
+    assert u1["status"] == "final"
+    assert u2["status"] == "final"

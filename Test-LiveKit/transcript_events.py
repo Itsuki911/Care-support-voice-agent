@@ -83,6 +83,8 @@ class TranscriptEventTracker:
 
         speaker = "assistant" if role == "assistant" else "user"
         if speaker == "user":
+            if self._active_user_utterance_id is None:
+                self._start_new_turn()
             utterance_id = self._active_user_utterance_id or item_id or f"utt-user-{uuid4().hex[:10]}"
             self._active_user_utterance_id = None
             self._user_turn_segments.clear()

@@ -67,7 +67,11 @@ function AssistantMessage() {
   );
 }
 
+export type SessionMode = 'voice' | 'text';
+
 export function App() {
+  const [sessionMode, setSessionMode] = useState<SessionMode>('voice');
+  const [textDraft, setTextDraft] = useState('');
   const [statusText, setStatusText] = useState('停止中');
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
@@ -77,6 +81,7 @@ export function App() {
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
   const activeRoomRef = useRef<Room | undefined>(undefined);
   const activeSessionIdRef = useRef<string | undefined>(undefined);
+  const activeModeRef = useRef<SessionMode>('voice');
   const abortControllerRef = useRef<AbortController | undefined>(undefined);
   const generationRef = useRef(0);
   const streamSeqRef = useRef(0);
@@ -96,6 +101,7 @@ export function App() {
     setApproval(null);
     setConnected(false);
     setConnecting(false);
+    setTextDraft('');
     setStatusText(message);
     audioContainerRef.current?.replaceChildren();
   }
@@ -113,27 +119,33 @@ export function App() {
 
   async function handleStart(): Promise<void> {
     const attempt = ++generationRef.current;
+    const mode = sessionMode;
+    activeModeRef.current = mode;
     setConnecting(true);
-    setStatusText('接続中…');
+    setStatusText(mode === 'voice' ? '音声セッションに接続中…' : 'テキスト専用セッションに接続中…');
     setStatusEvents([]);
     setMessagesRef.current([]);
+    setTextDraft('');
     streamSeqRef.current = 0;
 
     const room = new Room();
     activeRoomRef.current = room;
+    transport.setMode(mode);
     transport.setRoom(room);
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    room.on(RoomEvent.TrackSubscribed, (track) => {
-      if (track.kind === Track.Kind.Audio && audioContainerRef.current) {
-        audioContainerRef.current.append(track.attach());
-      }
-    });
+    if (mode === 'voice') {
+      room.on(RoomEvent.TrackSubscribed, (track) => {
+        if (track.kind === Track.Kind.Audio && audioContainerRef.current) {
+          audioContainerRef.current.append(track.attach());
+        }
+      });
 
-    room.on(RoomEvent.TrackUnsubscribed, (track) => {
-      track.detach().forEach((el) => el.remove());
-    });
+      room.on(RoomEvent.TrackUnsubscribed, (track) => {
+        track.detach().forEach((el) => el.remove());
+      });
+    }
 
     room.on(RoomEvent.Disconnected, () => {
       if (activeRoomRef.current === room) {
@@ -200,8 +212,15 @@ export function App() {
     });
 
     try {
-      await room.startAudio();
-      const response = await fetch('/api/token', { method: 'POST', signal: controller.signal });
+      if (mode === 'voice') {
+        await room.startAudio();
+      }
+      const response = await fetch('/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode }),
+        signal: controller.signal,
+      });
       if (!response.ok) {
         throw new Error('接続情報を取得できません。Pythonサーバーの設定を確認してください。');
       }
@@ -218,20 +237,35 @@ export function App() {
       }
       activeSessionIdRef.current = room.name;
 
-      await room.localParticipant.setMicrophoneEnabled(true);
-      if (attempt !== generationRef.current) {
-        await room.disconnect();
-        return;
+      if (mode === 'voice') {
+        await room.localParticipant.setMicrophoneEnabled(true);
+        if (attempt !== generationRef.current) {
+          await room.disconnect();
+          return;
+        }
       }
       setConnected(true);
       setConnecting(false);
-      setStatusText('接続済み。マイクに向かって話してください。');
+      setStatusText(
+        mode === 'voice'
+          ? '接続済み（音声専用セッション）。マイクに向かって話してください。'
+          : '接続済み（テキスト専用セッション）。下の入力欄からメッセージを送信してください。',
+      );
     } catch (error) {
       if (attempt !== generationRef.current) return;
       activeRoomRef.current = undefined;
       await room.disconnect();
       resetSessionUI(error instanceof Error ? error.message : '接続に失敗しました。');
     }
+  }
+
+  async function handleSendText(): Promise<void> {
+    if (!connected || activeModeRef.current !== 'text') return;
+    const room = activeRoomRef.current;
+    const text = textDraft.trim();
+    if (!room || !text) return;
+    setTextDraft('');
+    await chat.sendMessage({ text });
   }
 
   async function sendApprovalDecision(approved: boolean): Promise<void> {
@@ -261,13 +295,36 @@ export function App() {
   return (
     <main className="app-shell">
       <header className="app-header">
-        <h1>音声会話テスト</h1>
+        <h1>会話テスト（音声 / テキスト別セッション）</h1>
+        <fieldset className="mode-selector" disabled={connected || connecting}>
+          <legend>セッション種別（起動中は変更不可）</legend>
+          <label className={`mode-option ${sessionMode === 'voice' ? 'mode-option-active' : ''}`}>
+            <input
+              type="radio"
+              name="session-mode"
+              value="voice"
+              checked={sessionMode === 'voice'}
+              onChange={() => setSessionMode('voice')}
+            />
+            音声専用セッション（マイク・スピーカー）
+          </label>
+          <label className={`mode-option ${sessionMode === 'text' ? 'mode-option-active' : ''}`}>
+            <input
+              type="radio"
+              name="session-mode"
+              value="text"
+              checked={sessionMode === 'text'}
+              onChange={() => setSessionMode('text')}
+            />
+            テキスト専用セッション（チャット入力）
+          </label>
+        </fieldset>
         <p id="status" role="status" aria-live="polite">
           {statusText}
         </p>
         <div className="controls">
           <button id="start" type="button" disabled={connected || connecting} onClick={() => void handleStart()}>
-            起動
+            {sessionMode === 'voice' ? '音声セッションを起動' : 'テキストセッションを起動'}
           </button>
           <button id="stop" type="button" disabled={!connected && !connecting} onClick={() => void handleStop()}>
             停止
@@ -311,7 +368,11 @@ export function App() {
         <ThreadPrimitive.Root className="chat-thread">
           <ThreadPrimitive.Viewport className="chat-viewport">
             <ThreadPrimitive.Empty>
-              <p className="chat-empty">会話を開始すると、文字起こしがここに表示されます。</p>
+              <p className="chat-empty">
+                {sessionMode === 'voice'
+                  ? '音声セッションを開始すると、会話の文字起こしがここに表示されます。'
+                  : 'テキストセッションを開始すると、ここでテキストによる会話ができます。'}
+              </p>
             </ThreadPrimitive.Empty>
             <ThreadPrimitive.Messages
               components={{
@@ -322,6 +383,33 @@ export function App() {
           </ThreadPrimitive.Viewport>
         </ThreadPrimitive.Root>
       </AssistantRuntimeProvider>
+
+      {sessionMode === 'text' && (
+        <form
+          className="text-composer"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void handleSendText();
+          }}
+        >
+          <input
+            id="text-input"
+            type="text"
+            className="text-composer-input"
+            placeholder={
+              connected
+                ? 'メッセージを入力してEnterまたは送信…'
+                : '「テキストセッションを起動」を押すと入力できます'
+            }
+            value={textDraft}
+            disabled={!connected}
+            onChange={(e) => setTextDraft(e.target.value)}
+          />
+          <button type="submit" disabled={!connected || !textDraft.trim()}>
+            送信
+          </button>
+        </form>
+      )}
 
       <div ref={audioContainerRef} id="audio" />
     </main>

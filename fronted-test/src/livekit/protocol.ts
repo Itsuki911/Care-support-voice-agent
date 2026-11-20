@@ -69,6 +69,17 @@ export function applyTranscriptEvent(
   let existingIndex = messages.findIndex(
     (msg) => msg.id === event.utterance_id || msg.metadata?.utteranceId === event.utterance_id,
   );
+  if (existingIndex === -1 && event.speaker === 'user') {
+    // Reconcile client-submitted text message (from useChat.sendMessage) with the
+    // authoritative server transcript_event so it receives metadata & [確定] badge
+    // without creating a duplicate user bubble.
+    existingIndex = messages.findIndex(
+      (msg) =>
+        msg.role === 'user' &&
+        !msg.metadata?.utteranceId &&
+        msg.parts.some((p) => p.type === 'text' && p.text.trim() === displayText.trim()),
+    );
+  }
   if (existingIndex === -1 && event.speaker === 'assistant' && event.status !== 'interim') {
     // Reconcile final/interrupted assistant event from conversation_item_added
     // with an in-progress lk.transcription streaming bubble in the same session.

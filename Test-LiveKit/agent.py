@@ -115,6 +115,9 @@ async def entrypoint(ctx: JobContext) -> None:
     settings = Settings.from_env()
     prompt = load_prompt()
     room_name = getattr(ctx.room, "name", "") or "console"
+    is_text_session = room_name.startswith("frontend-test-text-")
+    use_voice = settings.voice_enabled and not is_text_session
+    session_mode = "text" if is_text_session or not settings.voice_enabled else "voice"
     # A new ID even for console restarts or a reused room prevents mixed sessions.
     session_id = f"{room_name}-{uuid4().hex}"
     transcript_tracker = TranscriptEventTracker(session_id=room_name)
@@ -135,10 +138,10 @@ async def entrypoint(ctx: JobContext) -> None:
     session_options = {
         "llm": openai.LLM.with_openrouter(model=settings.openrouter_model),
     }
-    if settings.voice_enabled:
-        # 音声モードだけ、STT（音声→文字）、TTS（文字→音声）、
+    if use_voice:
+        # 音声専用セッションのみ、STT（音声→文字）、TTS（文字→音声）、
         # VAD（発話の開始・終了を検出）をセッションへ追加する。
-        # これらは LiveKit Inference を利用し、モデル ID は .env から渡す。
+        # テキスト専用セッションでは音声入出力を一切有効化しない。
         session_options.update(
             stt=inference.STT(settings.stt_model),
             tts=inference.TTS(settings.tts_model, voice=settings.tts_voice),
@@ -150,7 +153,7 @@ async def entrypoint(ctx: JobContext) -> None:
     trace_provider = setup_langfuse(
         session_id, prompt_version=prompt.version, prompt_hash=prompt.digest
     )
-    monitor = SessionMonitor(trace_provider, session_id)
+    monitor = SessionMonitor(trace_provider, session_id, mode=session_mode)
 
     def observe_tool_state(execution_id: str, tool: str, state: str) -> None:
         monitor.tool_state(execution_id, tool, state)
@@ -202,6 +205,24 @@ async def entrypoint(ctx: JobContext) -> None:
     approvals = ApprovalManager(session_id, observer=observe_tool_state)
 
     if hasattr(ctx.room, "on"):
+        async def handle_user_text_turn(user_text: str) -> None:
+            if finalizing or finished:
+                return
+            try:
+                interrupt_fn = getattr(session, "interrupt", None)
+                if callable(interrupt_fn):
+                    res = interrupt_fn()
+                    if asyncio.iscoroutine(res) or isinstance(res, asyncio.Future):
+                        await res
+            except Exception:
+                logger.debug("Interrupt before text reply skipped", exc_info=True)
+            try:
+                reply = session.generate_reply(user_input=user_text, input_modality="text")
+                if asyncio.iscoroutine(reply) or isinstance(reply, asyncio.Future):
+                    await reply
+            except Exception:
+                logger.warning("Failed to generate reply for text input", exc_info=True)
+
         def handle_data_received(packet: object) -> None:
             raw = getattr(packet, "data", None)
             if not raw:
@@ -210,15 +231,24 @@ async def entrypoint(ctx: JobContext) -> None:
                 data = json.loads(raw.decode("utf-8"))
             except (UnicodeDecodeError, json.JSONDecodeError):
                 return
-            if not isinstance(data, dict) or data.get("type") != "approval_response":
+            if not isinstance(data, dict):
                 return
-            execution_id = data.get("execution_id")
-            approved = data.get("approved")
-            if isinstance(execution_id, str) and isinstance(approved, bool):
-                try:
-                    approvals.decide(session_id, execution_id, approved)
-                except Exception:
-                    logger.warning("Ignored invalid approval response", exc_info=True)
+            msg_type = data.get("type")
+            if msg_type == "approval_response":
+                execution_id = data.get("execution_id")
+                approved = data.get("approved")
+                if isinstance(execution_id, str) and isinstance(approved, bool):
+                    try:
+                        approvals.decide(session_id, execution_id, approved)
+                    except Exception:
+                        logger.warning("Ignored invalid approval response", exc_info=True)
+            elif msg_type == "user_text_input":
+                if not is_text_session:
+                    logger.warning("Ignored user_text_input in voice-only session")
+                    return
+                text_value = data.get("text")
+                if isinstance(text_value, str) and text_value.strip():
+                    asyncio.create_task(handle_user_text_turn(text_value.strip()))
 
         ctx.room.on("data_received", handle_data_received)
 
@@ -289,10 +319,24 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(shutdown)
     try:
-        await session.start(
-            agent=TerminalAssistant(None if ctx.is_fake_job() else approvals, prompt),
-            room=ctx.room,
-        )
+        start_kwargs: dict[str, object] = {
+            "agent": TerminalAssistant(None if ctx.is_fake_job() else approvals, prompt),
+            "room": ctx.room,
+        }
+        if not ctx.is_fake_job():
+            from livekit.agents.voice import room_io
+
+            if is_text_session:
+                start_kwargs["room_options"] = room_io.RoomOptions(
+                    audio_input=False,
+                    audio_output=False,
+                    text_input=False,
+                )
+            else:
+                start_kwargs["room_options"] = room_io.RoomOptions(
+                    text_input=False,
+                )
+        await session.start(**start_kwargs)
         # Console mode has no authenticated browser caller, so external tools
         # remain unavailable there. Browser approval uses authenticated room RPC.
         if not ctx.is_fake_job():

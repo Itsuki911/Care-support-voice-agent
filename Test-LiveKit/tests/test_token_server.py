@@ -73,3 +73,34 @@ def test_get_cannot_issue_token(client):
 
 def test_loopback_frontend_origin(client):
     assert client.post("/api/token", headers={"Origin": "http://127.0.0.1:5173"}).status_code == 200
+
+
+def test_text_mode_token_disables_microphone_publish_and_uses_text_room_prefix(client):
+    response = client.post(
+        "/api/token",
+        headers={"Origin": "http://localhost:5173"},
+        json={"mode": "text"},
+    )
+    assert response.status_code == 200
+    data = response.json()
+    claims = jwt.decode(
+        data["participant_token"],
+        "test-secret-for-unit-tests-only-32-bytes",
+        algorithms=["HS256"],
+        issuer="test-key",
+    )
+    grant = claims["video"]
+    assert grant["room"].startswith("frontend-test-text-")
+    assert grant["canPublish"] is False
+    assert grant.get("canPublishSources", []) == []
+    assert grant["canPublishData"] is True
+    assert grant["canSubscribe"] is True
+
+
+def test_invalid_mode_is_rejected(client):
+    response = client.post(
+        "/api/token",
+        headers={"Origin": "http://localhost:5173"},
+        json={"mode": "hybrid"},
+    )
+    assert response.status_code == 400

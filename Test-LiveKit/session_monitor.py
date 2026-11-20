@@ -7,9 +7,10 @@ from opentelemetry import trace
 
 
 class SessionMonitor:
-    def __init__(self, provider, session_id):
+    def __init__(self, provider, session_id, *, mode='voice'):
         self.tracer = provider.get_tracer('care-support.level0') if provider else None
         self.session_id = session_id
+        self.mode = mode
         self.tools = {}
         self.started = time_ns()
         self.usage = []
@@ -74,7 +75,8 @@ class SessionMonitor:
             for item in session.history.items:
                 self.record_turn(item, 'conversation_turn_final')
             with self.tracer.start_as_current_span('session_summary', start_time=self.started,
-                    attributes={**self.attrs(), 'session.end_reason': reason,
+                    attributes={**self.attrs(), 'session.mode': self.mode,
+                                'session.end_reason': reason,
                                 'usage.models': json.dumps(self.usage),
                                 'cost.stt': 'unavailable', 'cost.tts': 'unavailable',
                                 'cost.other': 'not_instrumented'}) as span:

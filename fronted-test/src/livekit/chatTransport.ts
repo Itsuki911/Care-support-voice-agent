@@ -7,9 +7,14 @@ const encoder = new TextEncoder();
 
 export class LiveKitChatTransport implements ChatTransport<VoiceUIMessage> {
   private room: Room | undefined;
+  private mode: 'voice' | 'text' = 'voice';
 
   setRoom(room: Room | undefined): void {
     this.room = room;
+  }
+
+  setMode(mode: 'voice' | 'text'): void {
+    this.mode = mode;
   }
 
   async sendMessages(options: {
@@ -26,7 +31,7 @@ export class LiveKitChatTransport implements ChatTransport<VoiceUIMessage> {
       .join('\n')
       .trim();
 
-    if (this.room && text) {
+    if (this.room && this.mode === 'text' && text) {
       const payload = JSON.stringify({
         type: 'user_text_input',
         chat_id: options.chatId,
