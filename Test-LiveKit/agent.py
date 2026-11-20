@@ -23,6 +23,9 @@ from livekit.plugins import openai
 
 from approvals import ApprovalManager, register_approval_rpc
 from gmail_tools import GmailTools
+from memory.factory import MemoryRuntime, create_memory_runtime
+from memory.models.memory import ConversationMessage
+from memory_tools import MemoryTools, format_recent_memories_for_prompt
 from observability import flush_traces, setup_langfuse
 from prompt_config import load_prompt
 from session_monitor import SessionMonitor
@@ -91,6 +94,7 @@ class TerminalAssistant(Agent):
         *,
         instructions: str | None = None,
         gmail_tools: GmailTools | None = None,
+        memory_tools: MemoryTools | None = None,
     ) -> None:
         gmail = gmail_tools or GmailTools(approvals=approvals)
         if instructions is not None:
@@ -98,10 +102,52 @@ class TerminalAssistant(Agent):
         else:
             prompt = prompt or load_prompt()
             prompt_text = prompt.text
+        tools = [gmail.search_emails, gmail.read_email, gmail.send_email]
+        if memory_tools is not None:
+            tools.extend([memory_tools.search_memories, memory_tools.list_recent_memories])
         super().__init__(
-            tools=[gmail.search_emails, gmail.read_email, gmail.send_email],
+            tools=tools,
             instructions=prompt_text,
         )
+
+
+def _init_memory_runtime() -> MemoryRuntime | None:
+    """Create MemoryRuntime when DATABASE_URL is configured; degrade gracefully otherwise."""
+    if os.getenv("MEMORY_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}:
+        return None
+    if not os.getenv("DATABASE_URL", "").strip():
+        return None
+    try:
+        runtime = create_memory_runtime()
+        runtime.worker.start()
+        return runtime
+    except Exception as exc:
+        logger.warning("Memory runtime initialization skipped (continuing without memory): %s", exc)
+        return None
+
+
+def _prompt_recent_memory_limit() -> int:
+    raw = os.getenv("MEMORY_PROMPT_RECENT_LIMIT", "5").strip()
+    try:
+        value = int(raw)
+    except ValueError:
+        return 5
+    return max(1, min(value, 5))
+
+
+def _resolve_participant_user_id(room: object) -> str | None:
+    participants = getattr(room, "remote_participants", None)
+    if isinstance(participants, dict):
+        values = participants.values()
+    elif participants is not None:
+        values = participants
+    else:
+        values = ()
+    for participant in values:
+        identity = getattr(participant, "identity", None)
+        if isinstance(identity, str) and identity.strip() and not identity.startswith("agent-"):
+            return identity.strip()
+    return None
 
 
 # AgentServer は LiveKit から届くジョブ（ルーム参加要求）を受け取るサーバー。
@@ -121,6 +167,59 @@ async def entrypoint(ctx: JobContext) -> None:
     # A new ID even for console restarts or a reused room prevents mixed sessions.
     session_id = f"{room_name}-{uuid4().hex}"
     transcript_tracker = TranscriptEventTracker(session_id=room_name)
+
+    default_user_id = os.getenv("DEFAULT_MEMORY_USER_ID", "default-user").strip() or "default-user"
+    if not ctx.is_fake_job() and hasattr(ctx, "connect") and callable(ctx.connect):
+        try:
+            await ctx.connect()
+        except Exception:
+            logger.debug("Pre-start ctx.connect() failed; deferring to session.start", exc_info=True)
+
+    user_id_state = {"user_id": _resolve_participant_user_id(ctx.room) or default_user_id}
+    memory_runtime = _init_memory_runtime()
+    recorded_messages: list[ConversationMessage] = []
+    memory_committed = False
+
+    def get_memory_user_id() -> str:
+        resolved = _resolve_participant_user_id(ctx.room)
+        if resolved:
+            user_id_state["user_id"] = resolved
+        return user_id_state["user_id"]
+
+    async def load_initial_instructions() -> str:
+        if memory_runtime is None:
+            return prompt.text
+        recent_limit = _prompt_recent_memory_limit()
+        try:
+            recent = await asyncio.wait_for(
+                memory_runtime.service.list_memories(get_memory_user_id(), limit=recent_limit),
+                timeout=3.0,
+            )
+        except Exception as exc:
+            logger.warning("Failed to load recent memories at session start: %s", exc)
+            recent = []
+        return prompt.text + format_recent_memories_for_prompt(recent, max_items=recent_limit)
+
+    def submit_conversation_to_memory(trigger: str) -> bool:
+        nonlocal memory_committed
+        if memory_committed or memory_runtime is None or not recorded_messages:
+            return False
+        memory_committed = True
+        uid = get_memory_user_id()
+        batch = [
+            m.model_copy(update={"user_id": uid, "session_id": session_id})
+            for m in recorded_messages
+        ]
+        queued = memory_runtime.worker.enqueue_conversation(uid, session_id, batch)
+        logger.info(
+            "Memory ingestion triggered (%s): user_id=%s session_id=%s messages=%d queued=%s",
+            trigger,
+            uid,
+            session_id,
+            len(batch),
+            queued,
+        )
+        return queued
 
     async def publish_json_data(payload: dict[str, object]) -> None:
         local_participant = getattr(ctx.room, "local_participant", None)
@@ -249,8 +348,17 @@ async def entrypoint(ctx: JobContext) -> None:
                 text_value = data.get("text")
                 if isinstance(text_value, str) and text_value.strip():
                     asyncio.create_task(handle_user_text_turn(text_value.strip()))
+            elif msg_type == "end_session":
+                submit_conversation_to_memory("end_session_button")
 
         ctx.room.on("data_received", handle_data_received)
+
+        def handle_participant_connected(participant: object) -> None:
+            identity = getattr(participant, "identity", None)
+            if isinstance(identity, str) and identity.strip() and not identity.startswith("agent-"):
+                user_id_state["user_id"] = identity.strip()
+
+        ctx.room.on("participant_connected", handle_participant_connected)
 
     @session.on("user_input_transcribed")
     def handle_user_transcribed(event: object) -> None:
@@ -272,6 +380,15 @@ async def entrypoint(ctx: JobContext) -> None:
             return
         text_content = getattr(item, "text_content", None)
         text = text_content() if callable(text_content) else str(text_content or "")
+        if text.strip():
+            recorded_messages.append(
+                ConversationMessage(
+                    user_id=get_memory_user_id(),
+                    session_id=session_id,
+                    role=role,
+                    content=text.strip(),
+                )
+            )
         payload = transcript_tracker.on_conversation_item_added(
             role=role,
             text=text,
@@ -300,6 +417,11 @@ async def entrypoint(ctx: JobContext) -> None:
                 await session.aclose()
                 monitor.finish(session, reason)
             finally:
+                if memory_runtime is not None:
+                    try:
+                        await memory_runtime.close()
+                    except Exception:
+                        logger.warning("Failed to close memory runtime cleanly", exc_info=True)
                 if trace_provider is not None:
                     await asyncio.to_thread(flush_traces, trace_provider)
                     await asyncio.to_thread(trace_provider.shutdown)
@@ -319,8 +441,19 @@ async def entrypoint(ctx: JobContext) -> None:
 
     ctx.add_shutdown_callback(shutdown)
     try:
+        initial_instructions = await load_initial_instructions()
+        session_memory_tools = (
+            MemoryTools(memory_runtime.service, get_memory_user_id)
+            if memory_runtime is not None
+            else None
+        )
         start_kwargs: dict[str, object] = {
-            "agent": TerminalAssistant(None if ctx.is_fake_job() else approvals, prompt),
+            "agent": TerminalAssistant(
+                None if ctx.is_fake_job() else approvals,
+                prompt,
+                instructions=initial_instructions,
+                memory_tools=session_memory_tools,
+            ),
             "room": ctx.room,
         }
         if not ctx.is_fake_job():

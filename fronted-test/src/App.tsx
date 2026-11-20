@@ -69,8 +69,24 @@ function AssistantMessage() {
 
 export type SessionMode = 'voice' | 'text';
 
+const USER_ID_STORAGE_KEY = 'care-support-user-id';
+const DEFAULT_USER_ID = 'default-user';
+
+function loadSavedUserId(): string {
+  try {
+    const saved = window.localStorage.getItem(USER_ID_STORAGE_KEY);
+    if (saved && saved.trim()) {
+      return saved.trim();
+    }
+  } catch {
+    // Ignore storage access errors in restricted environments.
+  }
+  return DEFAULT_USER_ID;
+}
+
 export function App() {
   const [sessionMode, setSessionMode] = useState<SessionMode>('voice');
+  const [userId, setUserId] = useState<string>(() => loadSavedUserId());
   const [textDraft, setTextDraft] = useState('');
   const [statusText, setStatusText] = useState('停止中');
   const [connected, setConnected] = useState(false);
@@ -106,15 +122,40 @@ export function App() {
     audioContainerRef.current?.replaceChildren();
   }
 
+  function handleUserIdChange(nextValue: string): void {
+    setUserId(nextValue);
+    try {
+      const trimmed = nextValue.trim();
+      if (trimmed) {
+        window.localStorage.setItem(USER_ID_STORAGE_KEY, trimmed);
+      } else {
+        window.localStorage.removeItem(USER_ID_STORAGE_KEY);
+      }
+    } catch {
+      // Ignore storage write errors.
+    }
+  }
+
   async function handleStop(): Promise<void> {
     generationRef.current += 1;
     abortControllerRef.current?.abort();
     const room = activeRoomRef.current;
+    const sessionId = activeSessionIdRef.current;
     activeRoomRef.current = undefined;
     if (room) {
+      try {
+        const payload = JSON.stringify({
+          type: 'end_session',
+          session_id: sessionId,
+        });
+        await room.localParticipant.publishData(encoder.encode(payload), { reliable: true });
+        await new Promise((resolve) => window.setTimeout(resolve, 150));
+      } catch {
+        // Proceed with disconnect even if the data channel is already closed.
+      }
       await room.disconnect();
     }
-    resetSessionUI('停止中');
+    resetSessionUI('会話を終了しました（記憶の保存をバックグラウンドで実行します）。');
   }
 
   async function handleStart(): Promise<void> {
@@ -215,10 +256,11 @@ export function App() {
       if (mode === 'voice') {
         await room.startAudio();
       }
+      const effectiveUserId = userId.trim() || DEFAULT_USER_ID;
       const response = await fetch('/api/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode }),
+        body: JSON.stringify({ mode, user_id: effectiveUserId }),
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -319,6 +361,18 @@ export function App() {
             テキスト専用セッション（チャット入力）
           </label>
         </fieldset>
+        <div className="user-id-row">
+          <label htmlFor="user-id-input">ユーザー ID（記憶の紐付け先）:</label>
+          <input
+            id="user-id-input"
+            type="text"
+            className="user-id-input"
+            value={userId}
+            disabled={connected || connecting}
+            placeholder={DEFAULT_USER_ID}
+            onChange={(e) => handleUserIdChange(e.target.value)}
+          />
+        </div>
         <p id="status" role="status" aria-live="polite">
           {statusText}
         </p>
@@ -327,7 +381,7 @@ export function App() {
             {sessionMode === 'voice' ? '音声セッションを起動' : 'テキストセッションを起動'}
           </button>
           <button id="stop" type="button" disabled={!connected && !connecting} onClick={() => void handleStop()}>
-            停止
+            会話終了
           </button>
         </div>
       </header>

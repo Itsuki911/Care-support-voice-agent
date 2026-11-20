@@ -53,6 +53,27 @@ body {
   cursor: not-allowed;
 }
 
+.user-id-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0.5rem 0 0.75rem;
+  font-size: 0.92rem;
+}
+
+.user-id-input {
+  flex: 0 1 220px;
+  font: inherit;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #d0d7de;
+  border-radius: 6px;
+}
+
+.user-id-input:disabled {
+  background: #f6f8fa;
+  cursor: not-allowed;
+}
+
 .text-composer {
   display: flex;
   gap: 0.5rem;

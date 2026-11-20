@@ -104,3 +104,29 @@ def test_invalid_mode_is_rejected(client):
         json={"mode": "hybrid"},
     )
     assert response.status_code == 400
+
+
+def test_explicit_user_id_is_used_as_identity(client):
+    response = client.post(
+        "/api/token",
+        headers={"Origin": "http://localhost:5173"},
+        json={"mode": "text", "user_id": "care-user_01"},
+    )
+    assert response.status_code == 200
+    claims = jwt.decode(
+        response.json()["participant_token"],
+        "test-secret-for-unit-tests-only-32-bytes",
+        algorithms=["HS256"],
+        issuer="test-key",
+    )
+    assert claims["sub"] == "care-user_01"
+
+
+@pytest.mark.parametrize("bad_uid", ["", "   ", "user with spaces", "../bad"])
+def test_invalid_user_id_is_rejected(client, bad_uid):
+    response = client.post(
+        "/api/token",
+        headers={"Origin": "http://localhost:5173"},
+        json={"mode": "voice", "user_id": bad_uid},
+    )
+    assert response.status_code == 400
