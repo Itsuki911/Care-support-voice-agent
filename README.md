@@ -2,13 +2,47 @@
 
 介護支援を想定した音声エージェントの機能検証プロジェクトです。LiveKit をリアルタイム会話基盤に、OpenRouter を LLM 接続に使用し、必要に応じて Gmail の検索・読み取り・送信をツールとして利用できます。
 
-## 機能検証用 URL
+## 開発方針：ローカル作業（2026-11-18）
 
-現在、ブラウザ側の機能検証には Cloudflare を使用しています。検証用 URL は次のとおりです。
+Cloudflareへの自動デプロイを一時停止する設定に変更しました。GitHub Actionsは手動実行の検証のみとし、デプロイジョブは無効化しています。この変更はGitHubへ反映して初めてリモート側に適用されます。
 
-- [https://care-support-voice-agent.neymar020510.workers.dev/](https://care-support-voice-agent.neymar020510.workers.dev/)
+ブラウザUI・トークンサーバー・Agentは手元のPCで起動します。LiveKit Cloud、OpenRouter、STT/TTSなどの外部APIは引き続き使用するため、オフライン動作ではありません。
 
-この URL は機能検証段階の環境です。恒久的な本番 URL・可用性・データ保存方針を保証するものではありません。Cloudflare へのデプロイ設定やシークレットは、このリポジトリには含めません。
+### macOS / Linuxでの起動
+
+リポジトリ直下から、別々のターミナルで実行します。初回は `Test-LiveKit/.env.example` を `.env` にコピーして認証情報を設定してください（既存の `.env` は上書きしません）。
+
+```sh
+# ターミナル1：Agent
+cd Test-LiveKit
+uv sync --locked
+uv run agent.py dev
+```
+
+```sh
+# ターミナル2：ローカルトークンサーバー
+cd Test-LiveKit
+uv run uvicorn token_server:app --host 127.0.0.1 --port 8000
+```
+
+```sh
+# ターミナル3：ブラウザUI
+cd fronted-test
+npm ci
+npm run dev
+```
+
+`http://localhost:5173` を開きます。UIの `/api` は標準で `http://127.0.0.1:8000` に転送されます。`fronted-test/.env.local` などに `TOKEN_SERVER_URL` を設定している場合もローカルURLを使用してください。
+
+### リモート環境の停止確認
+
+ローカルファイルの変更だけでは、既存の公開環境や実行中のジョブは停止しません。
+
+- GitHub Actionsで `CI and Cloudflare deployment` を無効化し、実行中・待機中のrunがあればキャンセルします。
+- Cloudflare側のCron Trigger、公開ルート、稼働中のContainerを確認して停止します。CI/CDの停止だけでは5分ごとのウォームアップは止まりません。
+- 同じLiveKitプロジェクトに接続するクラウド側Agentが残っていないことを確認してからローカルAgentを使用します。
+
+Cloudflareの設定ファイルは将来の再開用に保持します。以下のデプロイ手順は再開時の参考情報です。
 
 ## 現在の構成
 
@@ -123,7 +157,7 @@ GitHub リポジトリの **Settings → Secrets and variables → Actions** に
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`
 
-`main` への push で、Pythonテスト・フロントエンドビルド・Worker型検査が成功した場合のみ、Cloudflareへデプロイされます。
+現在はpush・pull requestによる自動実行を停止しています。手動実行では検証のみ行い、Cloudflareにはデプロイしません。再開時はワークフローのイベントとデプロイ条件を明示的に復元してください。
 
 ### Cloudflareのruntime secrets（Agentとトークン発行用）
 
@@ -175,6 +209,8 @@ npm run check
 テストでは外部 API、実際の Gmail アカウント、マイクは使用しません。実環境での音声会話・Gmail 操作には、各サービスの有効な認証情報が必要です。
 
 ## 詳細ドキュメント
+
+- [レベル0：承認UI・監視の確認と残作業](./development%20plan/level0-validation.md)
 
 - [LiveKit Agent / Gmail ツールの設定](./Test-LiveKit/README.md)
 - [ブラウザ音声会話 UI の設定](./fronted-test/README.md)

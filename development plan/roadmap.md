@@ -2,6 +2,8 @@
 
 ## レベル0: ツール制御・システムプロンプト・監視
 
+実装・検証手順と残る実環境確認は [level0-validation.md](./level0-validation.md) を参照。ローカル実装済み、実接続での完了条件は未確認。
+
 ### 現状と調査対象
 
 `Test-LiveKit/agent.py`はツールとシステムプロンプトを登録し、セッション開始前に`setup_langfuse`を呼ぶ。

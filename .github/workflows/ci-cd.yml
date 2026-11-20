@@ -1,9 +1,9 @@
 name: CI and Cloudflare deployment
 
+# Local development mode: automatic CI/CD is paused.
+# Manual runs execute checks only; deployment remains disabled.
 on:
-  pull_request:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -60,7 +60,7 @@ jobs:
   deploy:
     name: Deploy to Cloudflare
     needs: [python, frontend, worker]
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: ${{ false }} # Paused while developing locally.
     runs-on: ubuntu-latest
     environment: production
     defaults:

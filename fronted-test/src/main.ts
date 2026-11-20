@@ -1,5 +1,6 @@
 import { Room, RoomEvent, Track } from 'livekit-client';
 import './style.css';
+import { attachApprovals } from './approvals';
 
 const start = document.querySelector<HTMLButtonElement>('#start')!;
 const stop = document.querySelector<HTMLButtonElement>('#stop')!;
@@ -8,8 +9,11 @@ const audio = document.querySelector<HTMLDivElement>('#audio')!;
 let activeRoom: Room | undefined;
 let request: AbortController | undefined;
 let generation = 0;
+let detachApprovals: (() => void) | undefined;
 
 function reset(message: string): void {
+  detachApprovals?.();
+  detachApprovals = undefined;
   audio.replaceChildren();
   start.disabled = false;
   stop.disabled = true;
@@ -18,6 +22,8 @@ function reset(message: string): void {
 
 stop.onclick = async () => {
   generation++;
+  detachApprovals?.();
+  detachApprovals = undefined;
   request?.abort();
   const room = activeRoom;
   activeRoom = undefined;
@@ -58,6 +64,7 @@ start.onclick = async () => {
     if (attempt !== generation) { await room.disconnect(); return; }
     await room.localParticipant.setMicrophoneEnabled(true);
     if (attempt !== generation) { await room.disconnect(); return; }
+    detachApprovals = attachApprovals(room, document.querySelector<HTMLElement>('#approvals')!);
     status.textContent = '接続済み。マイクに向かって話してください。';
   } catch (error) {
     if (attempt !== generation) return;

@@ -1,6 +1,6 @@
 # ブラウザ音声会話テスト
 
-TypeScript + Vite + LiveKit Client SDK の最小画面です。操作は「起動」「停止」のみです。
+TypeScript + Vite + LiveKit Client SDK の最小画面です。会話の「起動」「停止」と、外部操作の「許可」「拒否」があります。
 起動するとマイク音声を送信してAIの音声を再生し、停止すると切断してマイクを解放します。
 ブラウザのボタンは会話への接続・切断用です。Pythonプロセスは別途起動します。
 
@@ -61,3 +61,7 @@ Pythonテストは実際のLiveKit SDKで署名したJWTを検証します。外
 - [JavaScript SDK（Room・音声トラック）](https://docs.livekit.io/reference/client-sdk-js/)
 - [Custom token generation](https://docs.livekit.io/frontends/build/authentication/custom/)
 - [Agent dispatch（名前未指定時の自動割り当て）](https://docs.livekit.io/agents/server/agent-dispatch/)
+
+## 外部操作の承認
+
+Gmailの検索・本文取得・送信は、画面に表示された内容を許可した後に実行します。承認は120秒で期限切れになり、停止・切断で未実行の操作は取り消されます。実行開始後の操作は取り消せず、結果不明の送信は自動再送しません。consoleモードでは外部操作を実行できません。

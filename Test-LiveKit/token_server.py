@@ -21,7 +21,7 @@ ALLOWED_ORIGINS = {"http://localhost:5173", "http://127.0.0.1:5173"}
 
 @app.post("/api/token")
 def create_token(request: Request, response: Response) -> dict[str, str]:
-    """Issue a short-lived, microphone-only grant for a fresh private test room."""
+    """Issue a short-lived, microphone and approval-RPC grant for a fresh private test room."""
     if request.headers.get("origin") not in ALLOWED_ORIGINS:
         raise HTTPException(status_code=403, detail="Local frontend origin required")
 
@@ -43,7 +43,7 @@ def create_token(request: Request, response: Response) -> dict[str, str]:
                 room=room,
                 can_publish=True,
                 can_subscribe=True,
-                can_publish_data=False,
+                can_publish_data=True,  # Approval RPC uses the room data transport.
                 can_publish_sources=["microphone"],
             )
         )

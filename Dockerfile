@@ -18,8 +18,14 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY Test-LiveKit/agent.py \
      Test-LiveKit/gmail_tools.py \
      Test-LiveKit/observability.py \
+     Test-LiveKit/approvals.py \
+     Test-LiveKit/prompt_config.py \
+     Test-LiveKit/trace_export.py \
+     Test-LiveKit/session_monitor.py \
      Test-LiveKit/container_agent.py \
      ./
+
+COPY Test-LiveKit/prompts ./prompts
 
 EXPOSE 8080
 

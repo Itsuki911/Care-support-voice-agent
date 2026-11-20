@@ -211,16 +211,27 @@ def test_valid_credentials_build_real_transport_without_network(monkeypatch):
 
 
 def test_tool_executes_off_event_loop_and_converts_errors():
+    from approvals import ApprovalManager
     main_thread = threading.get_ident()
     client = MagicMock()
-    client.search.side_effect = lambda *args: {'other_thread': threading.get_ident() != main_thread}
-    tools = gmail.GmailTools(client)
-    assert asyncio.run(tools.search_emails())['other_thread']
-    client.send.side_effect = gmail.GmailError('safe error')
-    with pytest.raises(ToolError, match='safe error'):
-        asyncio.run(tools.send_email('to@example.com', 'subject', 'body'))
-    client.read.return_value = {'id': 'x'}
-    assert asyncio.run(tools.read_email('x')) == {'id': 'x'}
+    client.search.side_effect = lambda **kwargs: {'other_thread': threading.get_ident() != main_thread}
+
+    async def scenario():
+        manager = ApprovalManager('test')
+        tools = gmail.GmailTools(client, manager)
+        async def approved(coro):
+            task = asyncio.create_task(coro)
+            await asyncio.sleep(0)
+            proposal = manager.snapshot()['proposal']
+            manager.decide('test', proposal['execution_id'], True)
+            return await task
+        assert (await approved(tools.search_emails()))['other_thread']
+        client.send.side_effect = gmail.GmailError('safe error')
+        with pytest.raises(ToolError, match='safe error'):
+            await approved(tools.send_email('to@example.com', 'subject', 'body'))
+        client.read.return_value = {'id': 'x'}
+        assert await approved(tools.read_email('x')) == {'id': 'x'}
+    asyncio.run(scenario())
 
 
 def test_auth_save_atomic_permissions_and_overwrite(tmp_path):

@@ -10,6 +10,7 @@ def test_setup_langfuse_configures_private_otlp_export(monkeypatch):
     monkeypatch.setenv("LANGFUSE_TRACING_ENVIRONMENT", "test")
     monkeypatch.setenv("LANGFUSE_RELEASE", "test-release")
 
+    monkeypatch.setenv("LOCAL_USER_ID", "local-user")
     provider = _FakeProvider()
     exporter_calls = []
     registration_calls = []
@@ -38,7 +39,8 @@ def test_setup_langfuse_configures_private_otlp_export(monkeypatch):
             },
         }
     ]
-    assert provider.processors == [("processor", "exporter")]
+    assert provider.processors[0][0] == "processor"
+    assert provider.processors[0][1].exporter == "exporter"
     assert registration_calls == [
         (
             (provider,),
@@ -47,6 +49,8 @@ def test_setup_langfuse_configures_private_otlp_export(monkeypatch):
                     "langfuse.session.id": "room-123",
                     "langfuse.environment": "test",
                     "service.name": "care-support-voice-agent",
+                    "langfuse.user.id": "local-user",
+                    "langfuse.observation.metadata.content_policy": "redacted",
                     "langfuse.release": "test-release",
                 },
                 "allow_pii": False,

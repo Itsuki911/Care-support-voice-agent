@@ -16,6 +16,7 @@ from livekit.agents.telemetry import set_tracer_provider
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
+from trace_export import ReportingExporter, load_prices
 
 
 logger = logging.getLogger("care-support-voice-agent.observability")
@@ -31,7 +32,7 @@ def _is_enabled() -> bool:
     }
 
 
-def setup_langfuse(session_id: str) -> TracerProvider | None:
+def setup_langfuse(session_id: str, *, prompt_version: str = "", prompt_hash: str = "") -> TracerProvider | None:
     """Configure a Langfuse OTLP exporter for one LiveKit agent session.
 
     Missing Langfuse configuration never prevents the voice agent from running.
@@ -62,7 +63,9 @@ def setup_langfuse(session_id: str) -> TracerProvider | None:
             "x-langfuse-ingestion-version": "4",
         },
     )
+    exporter = ReportingExporter(exporter, load_prices())
     provider = TracerProvider()
+    provider.export_diagnostics = exporter
     provider.add_span_processor(BatchSpanProcessor(exporter))
 
     metadata: dict[str, Any] = {
@@ -70,6 +73,11 @@ def setup_langfuse(session_id: str) -> TracerProvider | None:
         "langfuse.environment": os.getenv("LANGFUSE_TRACING_ENVIRONMENT", "development"),
         "service.name": "care-support-voice-agent",
     }
+    if prompt_version:
+        metadata["langfuse.observation.metadata.prompt_version"] = prompt_version
+        metadata["langfuse.observation.metadata.prompt_hash"] = prompt_hash
+    metadata["langfuse.user.id"] = os.getenv("LOCAL_USER_ID", "local-user")
+    metadata["langfuse.observation.metadata.content_policy"] = "redacted"
     release = os.getenv("LANGFUSE_RELEASE", "").strip()
     if release:
         metadata["langfuse.release"] = release

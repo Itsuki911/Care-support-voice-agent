@@ -5,3 +5,7 @@ h1 { font-size: 1.5rem; }
 button { font: inherit; padding: .8rem 1.8rem; margin: .4rem; cursor: pointer; }
 button:disabled { cursor: default; }
 #status { max-width: 36rem; min-height: 3rem; }
+
+#approvals { max-width: 42rem; text-align: left; overflow-wrap: anywhere; }
+#approvals pre { white-space: pre-wrap; max-height: 24rem; overflow: auto; background: white; padding: 1rem; border: 1px solid #b5c4cc; }
+#approvals h2 { font-size: 1.2rem; }

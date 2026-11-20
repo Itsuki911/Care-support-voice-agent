@@ -1,0 +1,1 @@
+case_id,prompt_version,prompt_hash,session_id,trace_id,max_3_sentences,clarifies_missing,admits_unknown,natural_japanese,approval_correct,first_response_seconds,llm_input_tokens,llm_output_tokens,llm_cost_usd,cost_source,notes
