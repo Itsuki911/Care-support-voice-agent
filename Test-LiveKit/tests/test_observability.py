@@ -4,6 +4,7 @@ import observability
 
 
 def test_setup_langfuse_configures_private_otlp_export(monkeypatch):
+    monkeypatch.delenv("LANGFUSE_ALLOW_PII", raising=False)
     monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-lf-test")
     monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-lf-test")
     monkeypatch.setenv("LANGFUSE_BASE_URL", "https://jp.cloud.langfuse.com/")
@@ -95,6 +96,7 @@ def test_setup_langfuse_respects_allow_pii_env(monkeypatch):
 
     assert observability.setup_langfuse("room-456") is provider
     assert registration_calls[0][1]["allow_pii"] is True
+    assert registration_calls[0][1]["metadata"]["langfuse.observation.metadata.content_policy"] == "full"
 
 
 def test_flush_traces():

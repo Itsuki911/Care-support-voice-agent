@@ -189,13 +189,14 @@ def setup_langfuse(
         metadata["langfuse.observation.metadata.prompt_version"] = prompt_version
         if prompt_hash or prompt_sha256:
             metadata["langfuse.observation.metadata.prompt_hash"] = prompt_hash or prompt_sha256
+    allow_pii = _allow_pii()
     metadata["langfuse.user.id"] = user_id or os.getenv("LOCAL_USER_ID", "local-user")
-    metadata["langfuse.observation.metadata.content_policy"] = "redacted"
+    metadata["langfuse.observation.metadata.content_policy"] = "full" if allow_pii else "redacted"
     release = os.getenv("LANGFUSE_RELEASE", "").strip()
     if release:
         metadata["langfuse.release"] = release
 
-    set_tracer_provider(provider, metadata=metadata, allow_pii=_allow_pii())
+    set_tracer_provider(provider, metadata=metadata, allow_pii=allow_pii)
     logger.info("Langfuse trace exporter configured", extra={"session_id": session_id})
     return provider
 
