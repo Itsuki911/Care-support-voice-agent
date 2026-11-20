@@ -17,6 +17,7 @@ class TranscriptEventTracker:
     _turn_index: int = 0
     _current_turn_id: str = "turn-0"
     _active_user_utterance_id: str | None = None
+    _user_turn_segments: list[str] = field(default_factory=list)
 
     def _next_seq(self) -> int:
         self._seq += 1
@@ -42,10 +43,17 @@ class TranscriptEventTracker:
         if self._active_user_utterance_id is None:
             self._start_new_turn()
             self._active_user_utterance_id = item_id or f"utt-user-{uuid4().hex[:10]}"
+            self._user_turn_segments.clear()
 
         utterance_id = self._active_user_utterance_id
         if is_final:
-            self._active_user_utterance_id = None
+            # Keep _active_user_utterance_id open across intra-turn STT segments so pauses
+            # within a single user turn update one bubble and match conversation_item_added.
+            if not self._user_turn_segments or self._user_turn_segments[-1] != text:
+                self._user_turn_segments.append(text)
+            full_text = " ".join(self._user_turn_segments)
+        else:
+            full_text = " ".join([*self._user_turn_segments, text])
 
         return {
             "type": "transcript_event",
@@ -56,7 +64,7 @@ class TranscriptEventTracker:
             "speaker": "user",
             "timestamp": timestamp if timestamp is not None else time.time(),
             "status": "final" if is_final else "interim",
-            "text": text,
+            "text": full_text,
         }
 
     def on_conversation_item_added(
@@ -77,8 +85,11 @@ class TranscriptEventTracker:
         if speaker == "user":
             utterance_id = self._active_user_utterance_id or item_id or f"utt-user-{uuid4().hex[:10]}"
             self._active_user_utterance_id = None
+            self._user_turn_segments.clear()
             status = "final"
         else:
+            self._active_user_utterance_id = None
+            self._user_turn_segments.clear()
             utterance_id = item_id or f"utt-asst-{uuid4().hex[:10]}"
             status = "interrupted" if interrupted else "final"
 

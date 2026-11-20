@@ -34,7 +34,7 @@ class SessionMonitor:
             span.end()
             self.tools.pop(execution_id, None)
 
-    def bind(self, session):
+    def bind(self, session, on_conversation_item=None):
         @session.on('session_usage_updated')
         def usage(ev):
             # Cumulative snapshots replace previous values; never sum them.
@@ -43,6 +43,8 @@ class SessionMonitor:
         @session.on('conversation_item_added')
         def turn(ev):
             self.record_turn(ev.item, 'conversation_turn')
+            if on_conversation_item is not None:
+                on_conversation_item(ev)
 
         @session.on('error')
         def error(ev):

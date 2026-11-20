@@ -147,9 +147,13 @@ export function App() {
       const sessionId = activeSessionIdRef.current;
       if (!sessionId || room.name !== sessionId) return;
 
-      const attrs = reader.info.attributes ?? {};
-      const utteranceId = attrs['lk.transcribed_track_id'] || reader.info.id;
       const isAgent = participantInfo.identity !== room.localParticipant.identity;
+      // User transcripts are delivered authoritatively via agent.py's TranscriptEventTracker
+      // over the room data channel (which merges intra-turn clauses under a single utterance_id).
+      if (!isAgent) return;
+
+      const attrs = reader.info.attributes ?? {};
+      const utteranceId = attrs['lk.segment_id'] || reader.info.id;
       let accumulated = '';
 
       for await (const chunk of reader) {
@@ -163,11 +167,11 @@ export function App() {
           turn_id: 'stream',
           utterance_id: `lk-${utteranceId}`,
           seq,
-          speaker: isAgent ? 'assistant' : 'user',
+          speaker: 'assistant',
           timestamp: Date.now() / 1000,
           status: isFinal ? 'final' : 'interim',
           text: accumulated,
-          ...(isAgent ? { spoken_text: accumulated } : {}),
+          spoken_text: accumulated,
         };
         setMessagesRef.current((prev) => applyTranscriptEvent(prev, event, sessionId));
       }

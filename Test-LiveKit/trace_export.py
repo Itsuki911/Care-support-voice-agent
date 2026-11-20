@@ -34,11 +34,28 @@ def load_prices() -> dict:
         return {}
 
 
-def enrich(span, prices: dict):
+def enrich(span, prices: dict, *, root_context=None, orphan_parent_id=None, trace_io=None):
     attrs = dict(span.attributes or {})
     attrs['langfuse.trace.name'] = 'care-support-conversation'
     if 'lk.speech_id' in attrs:
         attrs['langfuse.observation.metadata.turn_id'] = attrs['lk.speech_id']
+
+    parent = span.parent
+    if span.name == 'agent_session':
+        # LiveKit starts job_entrypoint on its internal TracerProvider before entrypoint()
+        # runs and ends it after shutdown callbacks. Clear agent_session's parent so Langfuse
+        # always receives agent_session as the true Root Observation (Is Root Observation = True).
+        parent = None
+        attrs.setdefault('langfuse.observation.type', 'agent')
+        if trace_io:
+            if trace_io.get('input') and 'langfuse.trace.input' not in attrs:
+                attrs['langfuse.trace.input'] = trace_io['input']
+            if trace_io.get('output') and 'langfuse.trace.output' not in attrs:
+                attrs['langfuse.trace.output'] = trace_io['output']
+    elif root_context is not None and span.context.span_id != root_context.span_id:
+        if parent is None or (orphan_parent_id is not None and parent.span_id == orphan_parent_id):
+            parent = root_context
+
     if span.name == 'llm_request':
         attrs['langfuse.observation.type'] = 'generation'
         model = attrs.get('gen_ai.response.model') or attrs.get('gen_ai.request.model', 'unknown')
@@ -68,7 +85,7 @@ def enrich(span, prices: dict):
             attrs['langfuse.observation.completion_start_time'] = datetime.fromtimestamp(span.start_time / 1e9 + ttft, timezone.utc).isoformat()
     if span.status.is_ok is False:
         attrs['langfuse.observation.level'] = 'ERROR'
-    return ReadableSpan(name=span.name, context=span.context, parent=span.parent,
+    return ReadableSpan(name=span.name, context=span.context, parent=parent,
                         resource=span.resource, attributes=attrs, events=span.events,
                         links=span.links, kind=span.kind, status=span.status,
                         start_time=span.start_time, end_time=span.end_time,
@@ -82,10 +99,43 @@ class ReportingExporter(SpanExporter):
         self.accepted = 0
         self.failed = 0
         self._lock = Lock()
+        self._trace_roots = {}
+        self._orphan_parents = {}
+        self._trace_io = {}
+
+    def _collect_trace_context(self, spans):
+        with self._lock:
+            for span in spans:
+                trace_id = span.context.trace_id
+                attrs = span.attributes or {}
+                if span.name == 'agent_session':
+                    self._trace_roots[trace_id] = span.context
+                    if span.parent is not None:
+                        self._orphan_parents[trace_id] = span.parent.span_id
+                # Only populate trace-level input/output when unredacted PII attributes exist on spans.
+                user_text = attrs.get('lk.pii.user_input') or attrs.get('lk.pii.user_transcript')
+                asst_text = attrs.get('lk.pii.response.text')
+                if user_text or asst_text:
+                    io_state = self._trace_io.setdefault(trace_id, {})
+                    if user_text:
+                        io_state['input'] = str(user_text)
+                    if asst_text:
+                        io_state['output'] = str(asst_text)
 
     def export(self, spans):
         try:
-            result = self.exporter.export([enrich(span, self.prices) for span in spans])
+            self._collect_trace_context(spans)
+            enriched = [
+                enrich(
+                    span,
+                    self.prices,
+                    root_context=self._trace_roots.get(span.context.trace_id),
+                    orphan_parent_id=self._orphan_parents.get(span.context.trace_id),
+                    trace_io=self._trace_io.get(span.context.trace_id),
+                )
+                for span in spans
+            ]
+            result = self.exporter.export(enriched)
         except Exception:
             # Never include transport exception text (may contain credentials/content).
             result = SpanExportResult.FAILURE

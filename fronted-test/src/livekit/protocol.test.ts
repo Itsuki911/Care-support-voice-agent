@@ -77,6 +77,89 @@ describe('applyTranscriptEvent', () => {
     );
     expect(messages).toHaveLength(1);
   });
+
+  it('merges multi-clause user turn updates and reconciles streaming assistant message with final commit', () => {
+    let messages: VoiceUIMessage[] = [];
+    // Clause 1 final, followed by Clause 2 interim and final, then conversation_item_added commit
+    const u1: TranscriptEvent = {
+      type: 'transcript_event',
+      session_id: 'room-1',
+      turn_id: 'turn-1',
+      utterance_id: 'utt-user-1',
+      seq: 1,
+      speaker: 'user',
+      timestamp: 100,
+      status: 'final',
+      text: 'えーと、Gメールツールを使って。',
+    };
+    const u2Interim: TranscriptEvent = {
+      ...u1,
+      seq: 2,
+      status: 'interim',
+      text: 'えーと、Gメールツールを使って。 今日の',
+    };
+    const u2Final: TranscriptEvent = {
+      ...u1,
+      seq: 3,
+      status: 'final',
+      text: 'えーと、Gメールツールを使って。 今日の。',
+    };
+
+    messages = applyTranscriptEvent(messages, u1, 'room-1');
+    messages = applyTranscriptEvent(messages, u2Interim, 'room-1');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].metadata?.status).toBe('interim');
+    messages = applyTranscriptEvent(messages, u2Final, 'room-1');
+    expect(messages).toHaveLength(1);
+    expect(messages[0].parts[0]).toEqual({
+      type: 'text',
+      text: 'えーと、Gメールツールを使って。 今日の。',
+    });
+    expect(messages[0].metadata?.status).toBe('final');
+
+    // Assistant streams via lk.transcription, then commits via conversation_item_added
+    const aStream: TranscriptEvent = {
+      type: 'transcript_event',
+      session_id: 'room-1',
+      turn_id: 'stream',
+      utterance_id: 'lk-SG_1',
+      seq: 1,
+      speaker: 'assistant',
+      timestamp: 101,
+      status: 'interim',
+      text: '最新のメールを',
+      spoken_text: '最新のメールを',
+    };
+    const aCommit: TranscriptEvent = {
+      type: 'transcript_event',
+      session_id: 'room-1',
+      turn_id: 'turn-1',
+      utterance_id: 'item_asst_1',
+      seq: 4,
+      speaker: 'assistant',
+      timestamp: 102,
+      status: 'final',
+      text: '最新のメールを確認します。',
+      spoken_text: '最新のメールを確認します。',
+      generated_text: '最新のメールを確認します。',
+    };
+
+    messages = applyTranscriptEvent(messages, aStream, 'room-1');
+    expect(messages).toHaveLength(2);
+    messages = applyTranscriptEvent(messages, aCommit, 'room-1');
+    expect(messages).toHaveLength(2);
+    expect(messages[1].parts[0]).toEqual({ type: 'text', text: '最新のメールを確認します。' });
+    expect(messages[1].metadata?.status).toBe('final');
+
+    // Late interim chunk from lk.transcription must not revert final status
+    messages = applyTranscriptEvent(
+      messages,
+      { ...aStream, seq: 99, status: 'interim', text: '最新のメールを' },
+      'room-1',
+    );
+    expect(messages).toHaveLength(2);
+    expect(messages[1].metadata?.status).toBe('final');
+  });
 });
 
 describe('applyStatusEvent', () => {

@@ -100,3 +100,43 @@ def test_prompt_is_versioned_and_path_is_constrained(monkeypatch):
     monkeypatch.setenv('SYSTEM_PROMPT_VERSION', '../secrets')
     import pytest
     with pytest.raises(ValueError): load_prompt()
+
+
+def test_agent_session_promoted_to_root_when_job_entrypoint_unexported():
+    from opentelemetry import trace as trace_api
+
+    unexported_provider = TracerProvider()
+    sink = InMemorySpanExporter()
+    langfuse_provider = TracerProvider()
+    langfuse_provider.add_span_processor(SimpleSpanProcessor(ReportingExporter(sink)))
+
+    try:
+        # Simulate LiveKit starting job_entrypoint on its internal provider before setup_langfuse()
+        job_span = unexported_provider.get_tracer('livekit-agents').start_span('job_entrypoint')
+        with trace_api.use_span(job_span, end_on_exit=False):
+            lk_tracer = langfuse_provider.get_tracer('livekit-agents')
+            with lk_tracer.start_as_current_span('agent_session') as session_span:
+                with lk_tracer.start_as_current_span(
+                    'agent_turn',
+                    attributes={
+                        'lk.pii.user_input': 'こんにちは',
+                        'lk.pii.response.text': 'こんにちは、いかがなさいましたか？',
+                    },
+                ):
+                    pass
+            # Sibling span created directly under job_entrypoint (e.g. job_shutdown)
+            with lk_tracer.start_as_current_span('job_shutdown'):
+                pass
+        job_span.end()
+
+        assert langfuse_provider.force_flush()
+        spans = {s.name: s for s in sink.get_finished_spans()}
+        assert spans['agent_session'].parent is None
+        assert spans['agent_session'].attributes['langfuse.trace.name'] == 'care-support-conversation'
+        assert spans['agent_session'].attributes['langfuse.trace.input'] == 'こんにちは'
+        assert spans['agent_session'].attributes['langfuse.trace.output'] == 'こんにちは、いかがなさいましたか？'
+        assert spans['agent_turn'].parent.span_id == session_span.get_span_context().span_id
+        assert spans['job_shutdown'].parent.span_id == session_span.get_span_context().span_id
+    finally:
+        langfuse_provider.shutdown()
+        unexported_provider.shutdown()

@@ -66,7 +66,19 @@ export function applyTranscriptEvent(
       ? event.spoken_text
       : event.text;
 
-  const existingIndex = messages.findIndex((msg) => msg.id === event.utterance_id);
+  let existingIndex = messages.findIndex(
+    (msg) => msg.id === event.utterance_id || msg.metadata?.utteranceId === event.utterance_id,
+  );
+  if (existingIndex === -1 && event.speaker === 'assistant' && event.status !== 'interim') {
+    // Reconcile final/interrupted assistant event from conversation_item_added
+    // with an in-progress lk.transcription streaming bubble in the same session.
+    existingIndex = messages.findIndex(
+      (msg) =>
+        msg.role === 'assistant' &&
+        msg.metadata?.sessionId === event.session_id &&
+        msg.metadata?.status === 'interim',
+    );
+  }
   if (existingIndex === -1) {
     const created: VoiceUIMessage = {
       id: event.utterance_id,
@@ -89,11 +101,20 @@ export function applyTranscriptEvent(
   const existing = messages[existingIndex];
   const prevMeta = existing.metadata;
   if (prevMeta) {
+    const sameSourceId =
+      existing.id === event.utterance_id && prevMeta.utteranceId === event.utterance_id;
     // Ignore replayed, out-of-order, or stale interim events after completion/interruption.
-    if (event.seq <= prevMeta.seq) {
+    if (sameSourceId && event.seq <= prevMeta.seq) {
       return messages;
     }
-    if (prevMeta.status !== 'interim' && event.status === 'interim') {
+    if (prevMeta.status === 'interrupted' && event.status === 'interim') {
+      return messages;
+    }
+    if (
+      prevMeta.status === 'final' &&
+      event.status === 'interim' &&
+      (event.speaker === 'assistant' || !sameSourceId)
+    ) {
       return messages;
     }
   }

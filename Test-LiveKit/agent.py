@@ -233,7 +233,26 @@ async def entrypoint(ctx: JobContext) -> None:
         if payload is not None:
             asyncio.create_task(publish_json_data(payload))
 
-    monitor.bind(session)
+    def handle_conversation_item(event: object) -> None:
+        item = getattr(event, "item", None)
+        if item is None:
+            return
+        role = str(getattr(item, "role", ""))
+        if role not in {"user", "assistant"}:
+            return
+        text_content = getattr(item, "text_content", None)
+        text = text_content() if callable(text_content) else str(text_content or "")
+        payload = transcript_tracker.on_conversation_item_added(
+            role=role,
+            text=text,
+            item_id=getattr(item, "id", None),
+            interrupted=bool(getattr(item, "interrupted", False)),
+            timestamp=getattr(event, "created_at", None),
+        )
+        if payload is not None:
+            asyncio.create_task(publish_json_data(payload))
+
+    monitor.bind(session, on_conversation_item=handle_conversation_item)
     finalizing = False
     finished = False
     finish_lock = asyncio.Lock()
