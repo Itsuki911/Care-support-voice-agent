@@ -17,6 +17,7 @@ from memory.models.memory import (
     ExtractionResponse,
     MemorySearchResult,
 )
+from memory.observability import NOOP_TRACER, MemorySpan, MemoryTracer
 
 logger = logging.getLogger("care-support-voice-agent.memory.llm")
 
@@ -106,12 +107,14 @@ class OpenRouterMemoryLLM:
         base_url: str = "https://openrouter.ai/api/v1",
         timeout_seconds: float = 30.0,
         client: httpx.AsyncClient | None = None,
+        tracer: MemoryTracer | None = None,
     ) -> None:
         self._api_key = api_key
         self._model = model
         self._base_url = base_url.rstrip("/")
         self._timeout_seconds = timeout_seconds
         self._external_client = client
+        self._tracer = tracer or NOOP_TRACER
 
     async def _complete_structured(
         self,
@@ -119,6 +122,34 @@ class OpenRouterMemoryLLM:
         system_prompt: str,
         user_prompt: str,
         response_model: type[T],
+        operation: str = "structured",
+    ) -> T:
+        with self._tracer.span(
+            f"memory.llm.{operation}",
+            observation_type="generation",
+            operation=operation,
+        ) as span:
+            span.set_model(self._model)
+            span.set_input(
+                [
+                    {"role": "system", "content": system_prompt},
+                    {"role": "user", "content": user_prompt},
+                ]
+            )
+            return await self._complete_structured_inner(
+                system_prompt=system_prompt,
+                user_prompt=user_prompt,
+                response_model=response_model,
+                span=span,
+            )
+
+    async def _complete_structured_inner(
+        self,
+        *,
+        system_prompt: str,
+        user_prompt: str,
+        response_model: type[T],
+        span: MemorySpan,
     ) -> T:
         if not self._api_key:
             raise LLMExtractionError("LLM_API_KEY / OPENROUTER_API_KEY is not configured")
@@ -151,11 +182,25 @@ class OpenRouterMemoryLLM:
         except (httpx.HTTPError, KeyError, IndexError, TypeError, ValueError) as exc:
             raise LLMExtractionError(f"Structured LLM request failed: {exc}") from None
 
+        usage = data.get("usage") if isinstance(data, dict) else None
+        if isinstance(usage, dict):
+            span.set_usage(
+                input_tokens=usage.get("prompt_tokens"),
+                output_tokens=usage.get("completion_tokens"),
+            )
+        response_model_name = data.get("model") if isinstance(data, dict) else None
+        if isinstance(response_model_name, str) and response_model_name:
+            span.set(response_model=response_model_name)
+        span.set_output(str(content))
+
         try:
             parsed = json.loads(_extract_json_block(str(content)))
-            return response_model.model_validate(parsed)
+            result = response_model.model_validate(parsed)
         except (ValueError, ValidationError) as exc:
+            span.set(validation="failed")
             raise LLMExtractionError(f"Structured LLM output failed validation: {exc}") from None
+        span.set(validation="ok")
+        return result
 
     async def extract_memories(
         self,
@@ -168,6 +213,7 @@ class OpenRouterMemoryLLM:
             system_prompt=EXTRACTION_SYSTEM_PROMPT,
             user_prompt=f"Conversation (session_id={session_id}):\n{transcript}",
             response_model=ExtractionResponse,
+            operation="extraction",
         )
         return [
             item.model_copy(update={"source_session_id": item.source_session_id or session_id})
@@ -211,4 +257,5 @@ class OpenRouterMemoryLLM:
             system_prompt=CONSOLIDATION_SYSTEM_PROMPT,
             user_prompt=user_prompt,
             response_model=ConsolidationDecision,
+            operation="consolidation",
         )

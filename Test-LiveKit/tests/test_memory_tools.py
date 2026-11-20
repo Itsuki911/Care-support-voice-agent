@@ -166,7 +166,7 @@ def test_agent_entrypoint_injects_recent_memories_and_commits_only_on_end_sessio
         close=fake_close,
     )
 
-    monkeypatch.setattr(agent, "_init_memory_runtime", lambda: fake_runtime)
+    monkeypatch.setattr(agent, "_init_memory_runtime", lambda *_, **__: fake_runtime)
     monkeypatch.setattr(agent, "setup_langfuse", lambda *a, **kw: None)
     monkeypatch.setattr(agent, "AgentSession", FakeSession)
     monkeypatch.setattr(agent.openai.LLM, "with_openrouter", lambda **_: "llm")

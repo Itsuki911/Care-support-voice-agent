@@ -18,6 +18,7 @@ from memory.models.memory import (
     MemorySearchResult,
     MemoryUpdate,
 )
+from memory.observability import NOOP_TRACER, MemoryTracer
 
 logger = logging.getLogger("care-support-voice-agent.memory.consolidation")
 
@@ -50,12 +51,14 @@ class MemoryConsolidationService:
         consolidator: MemoryConsolidatorBackend,
         similar_limit: int = 5,
         candidate_similarity_threshold: float = 0.35,
+        tracer: MemoryTracer | None = None,
     ) -> None:
         self._repository = repository
         self._embedding_provider = embedding_provider
         self._consolidator = consolidator
         self._similar_limit = similar_limit
         self._candidate_similarity_threshold = candidate_similarity_threshold
+        self._tracer = tracer or NOOP_TRACER
         self._user_locks: dict[str, asyncio.Lock] = {}
 
     def _lock_for_user(self, user_id: str) -> asyncio.Lock:
@@ -74,19 +77,31 @@ class MemoryConsolidationService:
         if not candidates:
             return outcome
 
-        # Serialize consolidation per user within the process to prevent race conditions.
-        async with self._lock_for_user(user_id):
-            for candidate in candidates:
-                try:
-                    await self._consolidate_one(user_id, candidate, outcome)
-                except Exception as exc:
-                    logger.warning(
-                        "Consolidation failed for user %s candidate %r: %s",
-                        user_id,
-                        candidate.content[:60],
-                        exc,
-                    )
-                    outcome.errors.append(str(exc))
+        with self._tracer.span(
+            "memory.consolidation",
+            user_id=user_id,
+            candidate_count=len(candidates),
+        ) as span:
+            # Serialize consolidation per user within the process to prevent race conditions.
+            async with self._lock_for_user(user_id):
+                for candidate in candidates:
+                    try:
+                        await self._consolidate_one(user_id, candidate, outcome)
+                    except Exception as exc:
+                        logger.warning(
+                            "Consolidation failed for user %s candidate %r: %s",
+                            user_id,
+                            candidate.content[:60],
+                            exc,
+                        )
+                        outcome.errors.append(str(exc))
+            span.set(
+                added_count=len(outcome.added_ids),
+                updated_count=len(outcome.updated_ids),
+                deleted_count=len(outcome.deleted_ids),
+                noop_count=outcome.noop_count,
+                error_count=len(outcome.errors),
+            )
         return outcome
 
     async def _consolidate_one(

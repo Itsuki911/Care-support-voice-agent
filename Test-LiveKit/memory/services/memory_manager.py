@@ -16,6 +16,7 @@ from memory.models.memory import (
     MemoryUpdate,
     ProcessConversationResult,
 )
+from memory.observability import NOOP_TRACER, MemoryTracer
 from memory.services.consolidation import MemoryConsolidationService
 from memory.services.extraction import MemoryExtractionService
 from memory.services.retrieval import MemoryRetrievalService
@@ -38,12 +39,14 @@ class PostgresMemoryService(BaseMemoryService):
         retrieval_service: MemoryRetrievalService,
         extraction_service: MemoryExtractionService,
         consolidation_service: MemoryConsolidationService,
+        tracer: MemoryTracer | None = None,
     ) -> None:
         self._repository = repository
         self._embedding_provider = embedding_provider
         self._retrieval = retrieval_service
         self._extraction = extraction_service
         self._consolidation = consolidation_service
+        self._tracer = tracer or NOOP_TRACER
 
     async def search_memory(
         self,
@@ -140,32 +143,50 @@ class PostgresMemoryService(BaseMemoryService):
         if not messages:
             return result
 
-        normalized = [
-            m.model_copy(update={"user_id": user_id, "session_id": session_id})
-            for m in messages
-        ]
-        saved = await self._repository.save_conversation_messages(normalized)
-        result.saved_messages = len(saved)
+        with self._tracer.span(
+            "memory.process_conversation",
+            user_id=user_id,
+            session_id=session_id,
+            message_count=len(messages),
+        ) as span:
+            normalized = [
+                m.model_copy(update={"user_id": user_id, "session_id": session_id})
+                for m in messages
+            ]
+            saved = await self._repository.save_conversation_messages(normalized)
+            result.saved_messages = len(saved)
 
-        try:
-            extracted = await self._extraction.extract(
-                normalized, session_id=session_id, raise_on_error=True
+            try:
+                extracted = await self._extraction.extract(
+                    normalized, session_id=session_id, raise_on_error=True
+                )
+            except Exception as exc:
+                result.errors.append(f"extraction_error: {exc}")
+                span.set_error(exc)
+                span.set(saved_messages=result.saved_messages, extracted_count=0, error_count=len(result.errors))
+                return result
+
+            result.extracted_count = len(extracted)
+            if not extracted:
+                span.set(saved_messages=result.saved_messages, extracted_count=0)
+                return result
+
+            consolidation = await self._consolidation.consolidate(user_id, extracted)
+            result.added_ids = consolidation.added_ids
+            result.updated_ids = consolidation.updated_ids
+            result.deleted_ids = consolidation.deleted_ids
+            result.noop_count = consolidation.noop_count
+            result.errors.extend(consolidation.errors)
+            span.set(
+                saved_messages=result.saved_messages,
+                extracted_count=result.extracted_count,
+                added_count=len(result.added_ids),
+                updated_count=len(result.updated_ids),
+                deleted_count=len(result.deleted_ids),
+                noop_count=result.noop_count,
+                error_count=len(result.errors),
             )
-        except Exception as exc:
-            result.errors.append(f"extraction_error: {exc}")
             return result
-
-        result.extracted_count = len(extracted)
-        if not extracted:
-            return result
-
-        consolidation = await self._consolidation.consolidate(user_id, extracted)
-        result.added_ids = consolidation.added_ids
-        result.updated_ids = consolidation.updated_ids
-        result.deleted_ids = consolidation.deleted_ids
-        result.noop_count = consolidation.noop_count
-        result.errors.extend(consolidation.errors)
-        return result
 
 
 class MemoryManager:

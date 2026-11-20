@@ -25,8 +25,9 @@ from approvals import ApprovalManager, register_approval_rpc
 from gmail_tools import GmailTools
 from memory.factory import MemoryRuntime, create_memory_runtime
 from memory.models.memory import ConversationMessage
+from memory.observability import MemoryTracer
 from memory_tools import MemoryTools, format_recent_memories_for_prompt
-from observability import flush_traces, setup_langfuse
+from observability import _allow_pii, flush_traces, setup_langfuse
 from prompt_config import load_prompt
 from session_monitor import SessionMonitor
 from transcript_events import TranscriptEventTracker
@@ -111,14 +112,14 @@ class TerminalAssistant(Agent):
         )
 
 
-def _init_memory_runtime() -> MemoryRuntime | None:
+def _init_memory_runtime(tracer: MemoryTracer | None = None) -> MemoryRuntime | None:
     """Create MemoryRuntime when DATABASE_URL is configured; degrade gracefully otherwise."""
     if os.getenv("MEMORY_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}:
         return None
     if not os.getenv("DATABASE_URL", "").strip():
         return None
     try:
-        runtime = create_memory_runtime()
+        runtime = create_memory_runtime(tracer=tracer)
         runtime.worker.start()
         return runtime
     except Exception as exc:
@@ -176,7 +177,14 @@ async def entrypoint(ctx: JobContext) -> None:
             logger.debug("Pre-start ctx.connect() failed; deferring to session.start", exc_info=True)
 
     user_id_state = {"user_id": _resolve_participant_user_id(ctx.room) or default_user_id}
-    memory_runtime = _init_memory_runtime()
+    trace_provider = setup_langfuse(
+        session_id,
+        user_id=user_id_state["user_id"],
+        prompt_version=prompt.version,
+        prompt_hash=prompt.digest,
+    )
+    memory_tracer = MemoryTracer(trace_provider, allow_content=_allow_pii())
+    memory_runtime = _init_memory_runtime(memory_tracer)
     recorded_messages: list[ConversationMessage] = []
     memory_committed = False
 
@@ -190,14 +198,24 @@ async def entrypoint(ctx: JobContext) -> None:
         if memory_runtime is None:
             return prompt.text
         recent_limit = _prompt_recent_memory_limit()
-        try:
-            recent = await asyncio.wait_for(
-                memory_runtime.service.list_memories(get_memory_user_id(), limit=recent_limit),
-                timeout=3.0,
-            )
-        except Exception as exc:
-            logger.warning("Failed to load recent memories at session start: %s", exc)
-            recent = []
+        uid = get_memory_user_id()
+        with memory_tracer.span(
+            "memory.prompt_injection",
+            user_id=uid,
+            limit=recent_limit,
+        ) as span:
+            try:
+                recent = await asyncio.wait_for(
+                    memory_runtime.service.list_memories(uid, limit=recent_limit),
+                    timeout=3.0,
+                )
+                span.set(status="ok", injected_count=len(recent))
+                span.set_output([m.content for m in recent])
+            except Exception as exc:
+                logger.warning("Failed to load recent memories at session start: %s", exc)
+                span.set_error(exc)
+                span.set(status="fallback", injected_count=0)
+                recent = []
         return prompt.text + format_recent_memories_for_prompt(recent, max_items=recent_limit)
 
     def submit_conversation_to_memory(trigger: str) -> bool:
@@ -210,7 +228,15 @@ async def entrypoint(ctx: JobContext) -> None:
             m.model_copy(update={"user_id": uid, "session_id": session_id})
             for m in recorded_messages
         ]
-        queued = memory_runtime.worker.enqueue_conversation(uid, session_id, batch)
+        with memory_tracer.span(
+            "memory.end_session",
+            trigger=trigger,
+            user_id=uid,
+            session_id=session_id,
+            message_count=len(batch),
+        ) as span:
+            queued = memory_runtime.worker.enqueue_conversation(uid, session_id, batch)
+            span.set(queued=queued)
         logger.info(
             "Memory ingestion triggered (%s): user_id=%s session_id=%s messages=%d queued=%s",
             trigger,
@@ -249,9 +275,6 @@ async def entrypoint(ctx: JobContext) -> None:
     # AgentSession は、音声入出力・会話履歴・LLM 呼び出し・割り込み処理を統合する。
     session = AgentSession(**session_options)
 
-    trace_provider = setup_langfuse(
-        session_id, prompt_version=prompt.version, prompt_hash=prompt.digest
-    )
     monitor = SessionMonitor(trace_provider, session_id, mode=session_mode)
 
     def observe_tool_state(execution_id: str, tool: str, state: str) -> None:

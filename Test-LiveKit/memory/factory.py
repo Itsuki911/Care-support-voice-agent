@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from database.config import MemorySettings
 from database.connection import DatabaseManager
+from memory.observability import NOOP_TRACER, MemoryTracer
 from memory.providers.llm_extractor import OpenRouterMemoryLLM
 from memory.providers.ollama_embedding import OllamaEmbeddingProvider
 from memory.repositories.postgres_repository import PostgresMemoryRepository
@@ -26,15 +27,21 @@ class MemoryRuntime:
     service: PostgresMemoryService
     manager: MemoryManager
     worker: MemoryBackgroundWorker
+    tracer: MemoryTracer = NOOP_TRACER
 
     async def close(self, *, drain_timeout: float = 20.0) -> None:
         await self.worker.stop(drain_timeout=drain_timeout)
         await self.db.close()
 
 
-def create_memory_runtime(settings: MemorySettings | None = None) -> MemoryRuntime:
+def create_memory_runtime(
+    settings: MemorySettings | None = None,
+    *,
+    tracer: MemoryTracer | None = None,
+) -> MemoryRuntime:
     """Build a complete local PostgreSQL + pgvector + Ollama memory runtime."""
     cfg = settings or MemorySettings.from_env()
+    active_tracer = tracer or NOOP_TRACER
     db = DatabaseManager(cfg.database_url)
     repository = PostgresMemoryRepository(db)
     embedding_provider = OllamaEmbeddingProvider(
@@ -47,18 +54,21 @@ def create_memory_runtime(settings: MemorySettings | None = None) -> MemoryRunti
         api_key=cfg.llm_api_key,
         model=cfg.llm_model,
         base_url=cfg.llm_base_url,
+        tracer=active_tracer,
     )
     retrieval = MemoryRetrievalService(
         repository=repository,
         embedding_provider=embedding_provider,
         default_limit=cfg.default_search_limit,
         default_min_similarity=cfg.similarity_threshold,
+        tracer=active_tracer,
     )
-    extraction = MemoryExtractionService(extractor=llm)
+    extraction = MemoryExtractionService(extractor=llm, tracer=active_tracer)
     consolidation = MemoryConsolidationService(
         repository=repository,
         embedding_provider=embedding_provider,
         consolidator=llm,
+        tracer=active_tracer,
     )
     service = PostgresMemoryService(
         repository=repository,
@@ -66,6 +76,7 @@ def create_memory_runtime(settings: MemorySettings | None = None) -> MemoryRunti
         retrieval_service=retrieval,
         extraction_service=extraction,
         consolidation_service=consolidation,
+        tracer=active_tracer,
     )
     manager = MemoryManager(service)
     worker = MemoryBackgroundWorker(manager)
@@ -78,4 +89,5 @@ def create_memory_runtime(settings: MemorySettings | None = None) -> MemoryRunti
         service=service,
         manager=manager,
         worker=worker,
+        tracer=active_tracer,
     )
