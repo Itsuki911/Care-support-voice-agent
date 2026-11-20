@@ -209,6 +209,7 @@ npm run build
 
 - [レベル0：承認UI・監視の確認と残作業](./development%20plan/level0-validation.md)
 - [レベル2：Agent Memory（PostgreSQL + pgvector + Ollama）セットアップ・設計ガイド](./Test-LiveKit/MEMORY_README.md)
+- [レベル3：ローカル RAG 基盤（PostgreSQL + pgvector + Ollama）設計・評価ガイド](./Test-LiveKit/RAG_README.md)
 
 - [LiveKit Agent / Gmail ツールの設定](./Test-LiveKit/README.md)
 - [ブラウザ音声会話 UI の設定](./fronted-test/README.md)

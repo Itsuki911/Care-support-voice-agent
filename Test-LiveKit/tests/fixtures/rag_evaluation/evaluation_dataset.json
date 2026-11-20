@@ -1,0 +1,332 @@
+[
+  {
+    "id": "q01",
+    "query": "勤務開始時刻と終了時刻は何時ですか？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "company_rules.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "午前9時00分",
+      "午後6時00分"
+    ]
+  },
+  {
+    "id": "q02",
+    "query": "フレックスタイム制度のコアタイムは何時から何時までですか？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "company_rules.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "午前10時30分",
+      "午後3時00分"
+    ]
+  },
+  {
+    "id": "q03",
+    "query": "お昼休みは何分間ありますか？正午に取れないときはどうなりますか？",
+    "category": "paraphrase",
+    "answerable": true,
+    "expected_document": "company_rules.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "60分間",
+      "代替休憩"
+    ]
+  },
+  {
+    "id": "q04",
+    "query": "電車が遅れて出社時間に間に合わない場合、減点されないようにするには何が必要ですか？",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "company_rules.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "遅延証明書",
+      "遅刻"
+    ]
+  },
+  {
+    "id": "q05",
+    "query": "有給休暇は何営業日前までに申請する必要がありますか？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "company_rules.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "3営業日前",
+      "有給休暇"
+    ]
+  },
+  {
+    "id": "q06",
+    "query": "3日以上続けて有給を取る場合、いつまでに上長へ申請しますか？",
+    "category": "paraphrase",
+    "answerable": true,
+    "expected_document": "company_rules.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "2週間前",
+      "連続"
+    ]
+  },
+  {
+    "id": "q07",
+    "query": "月の残業時間の上限は何時間ですか？人事部からアラートが出る基準も教えてください。",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "company_rules.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "45時間",
+      "30時間"
+    ]
+  },
+  {
+    "id": "q08",
+    "query": "在宅勤務のとき、出勤打刻はどの画面からどのように行いますか？",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "employee_manual.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "リモート勤務",
+      "出勤打刻"
+    ]
+  },
+  {
+    "id": "q09",
+    "query": "仕事が終わったあとの退勤打刻や中抜け休憩の記録方法を教えてください。",
+    "category": "paraphrase",
+    "answerable": true,
+    "expected_document": "employee_manual.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "退勤打刻",
+      "休憩開始"
+    ]
+  },
+  {
+    "id": "q10",
+    "query": "出勤打刻を忘れた場合はどうすればいいですか？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "employee_manual.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "勤怠修正申請",
+      "修正を申請"
+    ]
+  },
+  {
+    "id": "q11",
+    "query": "打刻漏れを直す申請には期限がありますか？何日以内に出せばよいですか？",
+    "category": "paraphrase",
+    "answerable": true,
+    "expected_document": "employee_manual.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "5営業日以内",
+      "修正期限"
+    ]
+  },
+  {
+    "id": "q12",
+    "query": "過去の勤怠履歴や今月の累計残業時間はどこで確認できますか？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "employee_manual.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "月次勤怠一覧",
+      "サマリーカード"
+    ]
+  },
+  {
+    "id": "q13",
+    "query": "パスワードを忘れてログインできなくなりました。再設定の方法を教えてください。",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "faq.md",
+    "expected_page": null,
+    "expected_keywords": [
+      "パスワードを再設定する",
+      "30分間"
+    ]
+  },
+  {
+    "id": "q14",
+    "query": "パスワードを何回間違えるとアカウントがロックされますか？",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "faq.md",
+    "expected_page": null,
+    "expected_keywords": [
+      "5回連続",
+      "15分間"
+    ]
+  },
+  {
+    "id": "q15",
+    "query": "出勤ボタンを押しても打刻できないときの対処法は？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "faq.md",
+    "expected_page": null,
+    "expected_keywords": [
+      "推奨ブラウザ",
+      "キャッシュ"
+    ]
+  },
+  {
+    "id": "q16",
+    "query": "すでに上長に承認された日の勤怠情報が間違っていた場合、どうやって訂正しますか？",
+    "category": "cross_document",
+    "answerable": true,
+    "expected_document": "faq.md",
+    "expected_page": null,
+    "expected_keywords": [
+      "承認取消依頼",
+      "差し戻し"
+    ]
+  },
+  {
+    "id": "q17",
+    "query": "スマートフォンから打刻や休暇の申請はできますか？",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "faq.md",
+    "expected_page": null,
+    "expected_keywords": [
+      "モバイルWeb",
+      "二段階認証"
+    ]
+  },
+  {
+    "id": "q18",
+    "query": "AobaTimeに初回ログインするときに必要な情報は何ですか？",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "system_guide.txt",
+    "expected_page": null,
+    "expected_keywords": [
+      "社員番号",
+      "二段階認証コード"
+    ]
+  },
+  {
+    "id": "q19",
+    "query": "操作しないで放置すると何分でタイムアウトしますか？",
+    "category": "paraphrase",
+    "answerable": true,
+    "expected_document": "system_guide.txt",
+    "expected_page": null,
+    "expected_keywords": [
+      "30分間",
+      "タイムアウト"
+    ]
+  },
+  {
+    "id": "q20",
+    "query": "勤怠データをCSVファイルでダウンロードできますか？文字コードは何ですか？",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "system_guide.txt",
+    "expected_page": null,
+    "expected_keywords": [
+      "CSVダウンロード",
+      "UTF-8"
+    ]
+  },
+  {
+    "id": "q21",
+    "query": "エラーコード E-204 が表示された場合の原因と対応を教えてください。",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "system_guide.txt",
+    "expected_page": null,
+    "expected_keywords": [
+      "E-204",
+      "打刻時刻の重複"
+    ]
+  },
+  {
+    "id": "q22",
+    "query": "定期メンテナンスはいつ実施されますか？エラーコードE-503とは何ですか？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "system_guide.txt",
+    "expected_page": null,
+    "expected_keywords": [
+      "E-503",
+      "第3日曜日"
+    ]
+  },
+  {
+    "id": "q23",
+    "query": "管理者が配下メンバーの打刻漏れを確認するにはどの画面を使いますか？",
+    "category": "cross_document",
+    "answerable": true,
+    "expected_document": "business_procedures.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "未打刻アラート",
+      "承認管理"
+    ]
+  },
+  {
+    "id": "q24",
+    "query": "部長による二次承認が必要になる申請はどのような場合ですか？",
+    "category": "natural_japanese",
+    "answerable": true,
+    "expected_document": "business_procedures.pdf",
+    "expected_page": 1,
+    "expected_keywords": [
+      "二次承認",
+      "部長"
+    ]
+  },
+  {
+    "id": "q25",
+    "query": "月末締め処理で社員と部署管理者の提出・確定期限はいつですか？",
+    "category": "exact_match",
+    "answerable": true,
+    "expected_document": "business_procedures.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "翌月第1営業日",
+      "翌月第2営業日"
+    ]
+  },
+  {
+    "id": "q26",
+    "query": "部署締め確定のあとに誤りが見つかった場合、どうやってロックを解除しますか？",
+    "category": "cross_document",
+    "answerable": true,
+    "expected_document": "business_procedures.pdf",
+    "expected_page": 2,
+    "expected_keywords": [
+      "締め解除依頼",
+      "人事部"
+    ]
+  },
+  {
+    "id": "q27",
+    "query": "社員食堂の今週のランチメニューと食券の購入方法を教えてください。",
+    "category": "unanswerable",
+    "answerable": false,
+    "expected_document": null,
+    "expected_page": null,
+    "expected_keywords": []
+  },
+  {
+    "id": "q28",
+    "query": "海外出張時の航空券クラス規定と日当の金額を教えてください。",
+    "category": "unanswerable",
+    "answerable": false,
+    "expected_document": null,
+    "expected_page": null,
+    "expected_keywords": []
+  }
+]

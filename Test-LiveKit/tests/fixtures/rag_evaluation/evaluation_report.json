@@ -1,0 +1,1294 @@
+{
+  "generated_at": "2026-11-20T13:51:05.250026+00:00",
+  "corpus_id": "rag_eval_attendance",
+  "embedding_model": "embeddinggemma-2:270m",
+  "embedding_dimension": 768,
+  "chunk_size": 450,
+  "chunk_overlap": 80,
+  "top_k": 5,
+  "ingested_documents": [
+    {
+      "filename": "business_procedures.pdf",
+      "file_type": "pdf",
+      "document_id": "27f9432a-30cc-4d07-b700-3ed6f75643e1",
+      "chunk_count": 4,
+      "status": "duplicate"
+    },
+    {
+      "filename": "company_rules.pdf",
+      "file_type": "pdf",
+      "document_id": "6ec234ce-4219-4f3e-85ee-958ee1f8a7ce",
+      "chunk_count": 4,
+      "status": "duplicate"
+    },
+    {
+      "filename": "employee_manual.pdf",
+      "file_type": "pdf",
+      "document_id": "b250a6ce-796c-471c-8927-e2cd5dc6a50d",
+      "chunk_count": 4,
+      "status": "duplicate"
+    },
+    {
+      "filename": "faq.md",
+      "file_type": "markdown",
+      "document_id": "ee4e687f-9a03-4574-9543-ced3b83b5ef0",
+      "chunk_count": 4,
+      "status": "duplicate"
+    },
+    {
+      "filename": "system_guide.txt",
+      "file_type": "txt",
+      "document_id": "de729be5-389f-46f4-a1a1-bee71f5f93d0",
+      "chunk_count": 5,
+      "status": "duplicate"
+    }
+  ],
+  "metrics": {
+    "total_queries": 28,
+    "answerable_queries": 26,
+    "unanswerable_queries": 2,
+    "document_recall_at_5": 0.9615,
+    "document_hits": 25,
+    "chunk_recall_at_5": 0.9615,
+    "chunk_hits": 25,
+    "pdf_page_recall_at_5": 1.0,
+    "pdf_page_hits": 16,
+    "pdf_page_checked": 16,
+    "citation_integrity_rate": 1.0,
+    "citation_valid": 140,
+    "citation_checked": 140,
+    "answerable_top1_score_mean": 0.8179,
+    "unanswerable_top1_score_mean": 0.6929,
+    "insufficient_evidence_threshold": 0.72,
+    "unanswerable_flagged_count": 2,
+    "latency_ms": {
+      "embedding": {
+        "mean": 43.318,
+        "p50": 42.59,
+        "p95": 52.084,
+        "min": 35.034,
+        "max": 54.337
+      },
+      "db_search": {
+        "mean": 4.83,
+        "p50": 4.42,
+        "p95": 7.004,
+        "min": 3.413,
+        "max": 10.423
+      },
+      "total": {
+        "mean": 48.148,
+        "p50": 47.942,
+        "p95": 56.306,
+        "min": 39.439,
+        "max": 58.316
+      }
+    }
+  },
+  "details": [
+    {
+      "id": "q01",
+      "category": "exact_match",
+      "query": "勤務開始時刻と終了時刻は何時ですか？",
+      "answerable": true,
+      "expected_document": "company_rules.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8014,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.8014
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7896
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.778
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7753
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7649
+        }
+      ],
+      "latency_ms": {
+        "embedding": 45.123,
+        "db_search": 5.411,
+        "total": 50.533
+      }
+    },
+    {
+      "id": "q02",
+      "category": "exact_match",
+      "query": "フレックスタイム制度のコアタイムは何時から何時までですか？",
+      "answerable": true,
+      "expected_document": "company_rules.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.7985,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7985
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7346
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7093
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7037
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.6966
+        }
+      ],
+      "latency_ms": {
+        "embedding": 52.084,
+        "db_search": 4.223,
+        "total": 56.306
+      }
+    },
+    {
+      "id": "q03",
+      "category": "paraphrase",
+      "query": "お昼休みは何分間ありますか？正午に取れないときはどうなりますか？",
+      "answerable": true,
+      "expected_document": "company_rules.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.7857,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7857
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7853
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7602
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7557
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7493
+        }
+      ],
+      "latency_ms": {
+        "embedding": 48.243,
+        "db_search": 4.548,
+        "total": 52.791
+      }
+    },
+    {
+      "id": "q04",
+      "category": "natural_japanese",
+      "query": "電車が遅れて出社時間に間に合わない場合、減点されないようにするには何が必要ですか？",
+      "answerable": true,
+      "expected_document": "company_rules.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8207,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.8207
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7586
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.7492
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7473
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7436
+        }
+      ],
+      "latency_ms": {
+        "embedding": 47.402,
+        "db_search": 5.269,
+        "total": 52.672
+      }
+    },
+    {
+      "id": "q05",
+      "category": "exact_match",
+      "query": "有給休暇は何営業日前までに申請する必要がありますか？",
+      "answerable": true,
+      "expected_document": "company_rules.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8465,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.8465
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.8046
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.7616
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7572
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7495
+        }
+      ],
+      "latency_ms": {
+        "embedding": 39.534,
+        "db_search": 5.031,
+        "total": 44.565
+      }
+    },
+    {
+      "id": "q06",
+      "category": "paraphrase",
+      "query": "3日以上続けて有給を取る場合、いつまでに上長へ申請しますか？",
+      "answerable": true,
+      "expected_document": "company_rules.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8148,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.8148
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.812
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.8028
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7803
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7709
+        }
+      ],
+      "latency_ms": {
+        "embedding": 45.455,
+        "db_search": 3.57,
+        "total": 49.025
+      }
+    },
+    {
+      "id": "q07",
+      "category": "natural_japanese",
+      "query": "月の残業時間の上限は何時間ですか？人事部からアラートが出る基準も教えてください。",
+      "answerable": true,
+      "expected_document": "company_rules.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8581,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.8581
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.8044
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.8029
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.7927
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7871
+        }
+      ],
+      "latency_ms": {
+        "embedding": 47.698,
+        "db_search": 3.985,
+        "total": 51.684
+      }
+    },
+    {
+      "id": "q08",
+      "category": "natural_japanese",
+      "query": "在宅勤務のとき、出勤打刻はどの画面からどのように行いますか？",
+      "answerable": true,
+      "expected_document": "employee_manual.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8044,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.8044
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7792
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7545
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7461
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7439
+        }
+      ],
+      "latency_ms": {
+        "embedding": 39.91,
+        "db_search": 4.072,
+        "total": 43.982
+      }
+    },
+    {
+      "id": "q09",
+      "category": "paraphrase",
+      "query": "仕事が終わったあとの退勤打刻や中抜け休憩の記録方法を教えてください。",
+      "answerable": true,
+      "expected_document": "employee_manual.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8519,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.8519
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.8023
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7791
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7773
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7744
+        }
+      ],
+      "latency_ms": {
+        "embedding": 41.398,
+        "db_search": 5.12,
+        "total": 46.518
+      }
+    },
+    {
+      "id": "q10",
+      "category": "exact_match",
+      "query": "出勤打刻を忘れた場合はどうすればいいですか？",
+      "answerable": true,
+      "expected_document": "employee_manual.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8011,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.8011
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7881
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7808
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7797
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.759
+        }
+      ],
+      "latency_ms": {
+        "embedding": 41.606,
+        "db_search": 7.004,
+        "total": 48.61
+      }
+    },
+    {
+      "id": "q11",
+      "category": "paraphrase",
+      "query": "打刻漏れを直す申請には期限がありますか？何日以内に出せばよいですか？",
+      "answerable": true,
+      "expected_document": "employee_manual.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.7766,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7766
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7401
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7369
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7306
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7258
+        }
+      ],
+      "latency_ms": {
+        "embedding": 41.642,
+        "db_search": 10.423,
+        "total": 52.065
+      }
+    },
+    {
+      "id": "q12",
+      "category": "exact_match",
+      "query": "過去の勤怠履歴や今月の累計残業時間はどこで確認できますか？",
+      "answerable": true,
+      "expected_document": "employee_manual.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8641,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.8641
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.855
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.8474
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.8201
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.8011
+        }
+      ],
+      "latency_ms": {
+        "embedding": 43.19,
+        "db_search": 3.555,
+        "total": 46.745
+      }
+    },
+    {
+      "id": "q13",
+      "category": "exact_match",
+      "query": "パスワードを忘れてログインできなくなりました。再設定の方法を教えてください。",
+      "answerable": true,
+      "expected_document": "faq.md",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.8287,
+      "top_results": [
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.8287
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7457
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7283
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7191
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7135
+        }
+      ],
+      "latency_ms": {
+        "embedding": 44.395,
+        "db_search": 3.728,
+        "total": 48.124
+      }
+    },
+    {
+      "id": "q14",
+      "category": "natural_japanese",
+      "query": "パスワードを何回間違えるとアカウントがロックされますか？",
+      "answerable": true,
+      "expected_document": "faq.md",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.7823,
+      "top_results": [
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7823
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7025
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.696
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.6942
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.6858
+        }
+      ],
+      "latency_ms": {
+        "embedding": 38.609,
+        "db_search": 4.606,
+        "total": 43.215
+      }
+    },
+    {
+      "id": "q15",
+      "category": "exact_match",
+      "query": "出勤ボタンを押しても打刻できないときの対処法は？",
+      "answerable": true,
+      "expected_document": "faq.md",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.8313,
+      "top_results": [
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.8313
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7922
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7776
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7565
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7479
+        }
+      ],
+      "latency_ms": {
+        "embedding": 41.651,
+        "db_search": 5.602,
+        "total": 47.253
+      }
+    },
+    {
+      "id": "q16",
+      "category": "cross_document",
+      "query": "すでに上長に承認された日の勤怠情報が間違っていた場合、どうやって訂正しますか？",
+      "answerable": true,
+      "expected_document": "faq.md",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.8664,
+      "top_results": [
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.8664
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.8278
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.827
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7903
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.79
+        }
+      ],
+      "latency_ms": {
+        "embedding": 49.086,
+        "db_search": 3.751,
+        "total": 52.837
+      }
+    },
+    {
+      "id": "q17",
+      "category": "natural_japanese",
+      "query": "スマートフォンから打刻や休暇の申請はできますか？",
+      "answerable": true,
+      "expected_document": "faq.md",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.8189,
+      "top_results": [
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.8189
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7869
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.771
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7651
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7592
+        }
+      ],
+      "latency_ms": {
+        "embedding": 54.337,
+        "db_search": 3.979,
+        "total": 58.316
+      }
+    },
+    {
+      "id": "q18",
+      "category": "natural_japanese",
+      "query": "AobaTimeに初回ログインするときに必要な情報は何ですか？",
+      "answerable": true,
+      "expected_document": "system_guide.txt",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.8342,
+      "top_results": [
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.8342
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.8294
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7913
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7749
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7667
+        }
+      ],
+      "latency_ms": {
+        "embedding": 41.696,
+        "db_search": 4.684,
+        "total": 46.381
+      }
+    },
+    {
+      "id": "q19",
+      "category": "paraphrase",
+      "query": "操作しないで放置すると何分でタイムアウトしますか？",
+      "answerable": true,
+      "expected_document": "system_guide.txt",
+      "expected_page": null,
+      "doc_hit_at_5": false,
+      "chunk_hit_at_5": false,
+      "page_hit_at_5": null,
+      "top_score": 0.7735,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7735
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.7455
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 1,
+          "score": 0.7428
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7408
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7201
+        }
+      ],
+      "latency_ms": {
+        "embedding": 43.823,
+        "db_search": 3.937,
+        "total": 47.76
+      }
+    },
+    {
+      "id": "q20",
+      "category": "natural_japanese",
+      "query": "勤怠データをCSVファイルでダウンロードできますか？文字コードは何ですか？",
+      "answerable": true,
+      "expected_document": "system_guide.txt",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.8504,
+      "top_results": [
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.8504
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7632
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.762
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7605
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7593
+        }
+      ],
+      "latency_ms": {
+        "embedding": 44.132,
+        "db_search": 6.316,
+        "total": 50.448
+      }
+    },
+    {
+      "id": "q21",
+      "category": "exact_match",
+      "query": "エラーコード E-204 が表示された場合の原因と対応を教えてください。",
+      "answerable": true,
+      "expected_document": "system_guide.txt",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.805,
+      "top_results": [
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.805
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7795
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7081
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.6817
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.6792
+        }
+      ],
+      "latency_ms": {
+        "embedding": 44.1,
+        "db_search": 5.122,
+        "total": 49.222
+      }
+    },
+    {
+      "id": "q22",
+      "category": "exact_match",
+      "query": "定期メンテナンスはいつ実施されますか？エラーコードE-503とは何ですか？",
+      "answerable": true,
+      "expected_document": "system_guide.txt",
+      "expected_page": null,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": null,
+      "top_score": 0.8017,
+      "top_results": [
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.8017
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.6894
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.661
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.6586
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.6567
+        }
+      ],
+      "latency_ms": {
+        "embedding": 51.218,
+        "db_search": 3.856,
+        "total": 55.074
+      }
+    },
+    {
+      "id": "q23",
+      "category": "cross_document",
+      "query": "管理者が配下メンバーの打刻漏れを確認するにはどの画面を使いますか？",
+      "answerable": true,
+      "expected_document": "business_procedures.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.7543,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7543
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7429
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.741
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.7407
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.7313
+        }
+      ],
+      "latency_ms": {
+        "embedding": 41.991,
+        "db_search": 4.353,
+        "total": 46.344
+      }
+    },
+    {
+      "id": "q24",
+      "category": "natural_japanese",
+      "query": "部長による二次承認が必要になる申請はどのような場合ですか？",
+      "answerable": true,
+      "expected_document": "business_procedures.pdf",
+      "expected_page": 1,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8346,
+      "top_results": [
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.8346
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7379
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.7303
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.7143
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.685
+        }
+      ],
+      "latency_ms": {
+        "embedding": 37.058,
+        "db_search": 3.413,
+        "total": 40.471
+      }
+    },
+    {
+      "id": "q25",
+      "category": "exact_match",
+      "query": "月末締め処理で社員と部署管理者の提出・確定期限はいつですか？",
+      "answerable": true,
+      "expected_document": "business_procedures.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.83,
+      "top_results": [
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.83
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.8059
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.7953
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.7818
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7803
+        }
+      ],
+      "latency_ms": {
+        "embedding": 38.972,
+        "db_search": 6.968,
+        "total": 45.94
+      }
+    },
+    {
+      "id": "q26",
+      "category": "cross_document",
+      "query": "部署締め確定のあとに誤りが見つかった場合、どうやってロックを解除しますか？",
+      "answerable": true,
+      "expected_document": "business_procedures.pdf",
+      "expected_page": 2,
+      "doc_hit_at_5": true,
+      "chunk_hit_at_5": true,
+      "page_hit_at_5": true,
+      "top_score": 0.8315,
+      "top_results": [
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.8315
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.8264
+        },
+        {
+          "filename": "faq.md",
+          "page_number": null,
+          "score": 0.7784
+        },
+        {
+          "filename": "system_guide.txt",
+          "page_number": null,
+          "score": 0.7647
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.7608
+        }
+      ],
+      "latency_ms": {
+        "embedding": 35.034,
+        "db_search": 4.487,
+        "total": 39.52
+      }
+    },
+    {
+      "id": "q27",
+      "category": "unanswerable",
+      "query": "社員食堂の今週のランチメニューと食券の購入方法を教えてください。",
+      "answerable": false,
+      "top_score": 0.6866,
+      "flagged_insufficient_evidence": true,
+      "top_results": [
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.6866
+        },
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 1,
+          "score": 0.6757
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 2,
+          "score": 0.6742
+        }
+      ],
+      "latency_ms": {
+        "embedding": 38.07,
+        "db_search": 4.22,
+        "total": 42.291
+      }
+    },
+    {
+      "id": "q28",
+      "category": "unanswerable",
+      "query": "海外出張時の航空券クラス規定と日当の金額を教えてください。",
+      "answerable": false,
+      "top_score": 0.6992,
+      "flagged_insufficient_evidence": true,
+      "top_results": [
+        {
+          "filename": "company_rules.pdf",
+          "page_number": 2,
+          "score": 0.6992
+        },
+        {
+          "filename": "employee_manual.pdf",
+          "page_number": 2,
+          "score": 0.6849
+        },
+        {
+          "filename": "business_procedures.pdf",
+          "page_number": 1,
+          "score": 0.679
+        }
+      ],
+      "latency_ms": {
+        "embedding": 35.435,
+        "db_search": 4.004,
+        "total": 39.439
+      }
+    }
+  ]
+}
