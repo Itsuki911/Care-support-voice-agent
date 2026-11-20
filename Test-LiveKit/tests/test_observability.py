@@ -75,6 +75,28 @@ def test_setup_langfuse_obeys_disable_flag(monkeypatch):
     assert observability.setup_langfuse("room-123") is None
 
 
+def test_setup_langfuse_respects_allow_pii_env(monkeypatch):
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk-lf-test")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk-lf-test")
+    monkeypatch.setenv("LANGFUSE_BASE_URL", "https://jp.cloud.langfuse.com/")
+    monkeypatch.setenv("LANGFUSE_ALLOW_PII", "true")
+
+    provider = _FakeProvider()
+    registration_calls = []
+
+    monkeypatch.setattr(observability, "TracerProvider", lambda: provider)
+    monkeypatch.setattr(observability, "BatchSpanProcessor", lambda exporter: ("processor", exporter))
+    monkeypatch.setattr(observability, "OTLPSpanExporter", lambda **kwargs: "exporter")
+    monkeypatch.setattr(
+        observability,
+        "set_tracer_provider",
+        lambda *args, **kwargs: registration_calls.append((args, kwargs)),
+    )
+
+    assert observability.setup_langfuse("room-456") is provider
+    assert registration_calls[0][1]["allow_pii"] is True
+
+
 def test_flush_traces():
     provider = _FakeProvider()
     assert observability.flush_traces(provider) is True

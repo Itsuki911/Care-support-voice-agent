@@ -10,6 +10,8 @@ Run it with the local microphone and speakers:
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import os
 from dataclasses import dataclass
 
@@ -19,12 +21,16 @@ from dotenv import load_dotenv
 from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli, inference
 from livekit.plugins import openai
 
+from approvals import ApprovalManager, register_approval_rpc
 from gmail_tools import GmailTools
 from observability import flush_traces, setup_langfuse
-from approvals import ApprovalManager, register_approval_rpc
 from prompt_config import load_prompt
 from session_monitor import SessionMonitor
+from transcript_events import TranscriptEventTracker
 from uuid import uuid4
+
+
+logger = logging.getLogger("care-support-voice-agent")
 
 
 # override=False により、OS 側で明示的に指定した環境変数を .env で上書きしない。
@@ -78,12 +84,23 @@ class Settings:
 
 
 class TerminalAssistant(Agent):
-    def __init__(self, approvals: ApprovalManager | None = None, prompt=None) -> None:
-        gmail = GmailTools(approvals=approvals)
-        prompt = prompt or load_prompt()
+    def __init__(
+        self,
+        approvals: ApprovalManager | None = None,
+        prompt=None,
+        *,
+        instructions: str | None = None,
+        gmail_tools: GmailTools | None = None,
+    ) -> None:
+        gmail = gmail_tools or GmailTools(approvals=approvals)
+        if instructions is not None:
+            prompt_text = instructions
+        else:
+            prompt = prompt or load_prompt()
+            prompt_text = prompt.text
         super().__init__(
             tools=[gmail.search_emails, gmail.read_email, gmail.send_email],
-            instructions=prompt.text,
+            instructions=prompt_text,
         )
 
 
@@ -96,10 +113,21 @@ server = AgentServer()
 async def entrypoint(ctx: JobContext) -> None:
     """LiveKit のルームまたはローカル console 用に、1 会話セッションを作る。"""
     settings = Settings.from_env()
-
     prompt = load_prompt()
+    room_name = getattr(ctx.room, "name", "") or "console"
     # A new ID even for console restarts or a reused room prevents mixed sessions.
-    session_id = f"{ctx.room.name or 'console'}-{uuid4().hex}"
+    session_id = f"{room_name}-{uuid4().hex}"
+    transcript_tracker = TranscriptEventTracker(session_id=room_name)
+
+    async def publish_json_data(payload: dict[str, object]) -> None:
+        local_participant = getattr(ctx.room, "local_participant", None)
+        if local_participant is None:
+            return
+        encoded = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        try:
+            await local_participant.publish_data(encoded, reliable=True)
+        except Exception:
+            logger.debug("Failed to publish data payload to room", exc_info=True)
 
     # OpenRouter は OpenAI 互換の Chat Completions API を提供している。
     # LiveKit の OpenAI プラグイン経由で接続するため、API キーは
@@ -119,9 +147,91 @@ async def entrypoint(ctx: JobContext) -> None:
     # AgentSession は、音声入出力・会話履歴・LLM 呼び出し・割り込み処理を統合する。
     session = AgentSession(**session_options)
 
-    trace_provider = setup_langfuse(session_id, prompt_version=prompt.version, prompt_hash=prompt.digest)
+    trace_provider = setup_langfuse(
+        session_id, prompt_version=prompt.version, prompt_hash=prompt.digest
+    )
     monitor = SessionMonitor(trace_provider, session_id)
-    approvals = ApprovalManager(session_id, observer=monitor.tool_state)
+
+    def observe_tool_state(execution_id: str, tool: str, state: str) -> None:
+        monitor.tool_state(execution_id, tool, state)
+        status_event = transcript_tracker.make_status_event(
+            kind="tool",
+            status=state,
+            execution_id=execution_id,
+            label=tool,
+        )
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
+        loop.create_task(publish_json_data(status_event))
+        if state == "pending":
+            op = approvals.operations.get(execution_id)
+            if op is not None:
+                args = op.arguments
+                if tool == "send_email":
+                    target = str(args.get("recipient", ""))
+                    body = str(args.get("body", ""))
+                    preview = body[:120] + ("…" if len(body) > 120 else "")
+                    summary = f"件名: {args.get('subject', '')}\n本文: {preview}"
+                    reversible = False
+                elif tool == "read_email":
+                    target = f"メールID: {args.get('message_id', '')}"
+                    summary = "指定メールの本文を取得（既読にはしません）"
+                    reversible = True
+                else:
+                    target = "Gmail 受信トレイ検索"
+                    summary = f"検索条件: {args.get('query', '')}（最大 {args.get('max_results', 5)} 件）"
+                    reversible = True
+                loop.create_task(
+                    publish_json_data(
+                        {
+                            "type": "approval_request",
+                            "execution_id": execution_id,
+                            "session_id": room_name,
+                            "tool_name": tool,
+                            "target": target,
+                            "summary": summary,
+                            "reversible": reversible,
+                            "expires_at": op.expires_at,
+                            "status": state,
+                        }
+                    )
+                )
+
+    approvals = ApprovalManager(session_id, observer=observe_tool_state)
+
+    if hasattr(ctx.room, "on"):
+        def handle_data_received(packet: object) -> None:
+            raw = getattr(packet, "data", None)
+            if not raw:
+                return
+            try:
+                data = json.loads(raw.decode("utf-8"))
+            except (UnicodeDecodeError, json.JSONDecodeError):
+                return
+            if not isinstance(data, dict) or data.get("type") != "approval_response":
+                return
+            execution_id = data.get("execution_id")
+            approved = data.get("approved")
+            if isinstance(execution_id, str) and isinstance(approved, bool):
+                try:
+                    approvals.decide(session_id, execution_id, approved)
+                except Exception:
+                    logger.warning("Ignored invalid approval response", exc_info=True)
+
+        ctx.room.on("data_received", handle_data_received)
+
+    @session.on("user_input_transcribed")
+    def handle_user_transcribed(event: object) -> None:
+        payload = transcript_tracker.on_user_transcribed(
+            transcript=str(getattr(event, "transcript", "")),
+            is_final=bool(getattr(event, "is_final", False)),
+            item_id=getattr(event, "item_id", None),
+            timestamp=getattr(event, "created_at", None),
+        )
+        if payload is not None:
+            asyncio.create_task(publish_json_data(payload))
 
     monitor.bind(session)
     finalizing = False

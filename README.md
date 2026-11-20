@@ -8,6 +8,9 @@ Cloudflareへの自動デプロイを一時停止する設定に変更しまし�
 
 ブラウザUI・トークンサーバー・Agentは手元のPCで起動します。LiveKit Cloud、OpenRouter、STT/TTSなどの外部APIは引き続き使用するため、オフライン動作ではありません。
 
+（参考）Cloudflare Workers 上の検証用 URL:
+https://care-support-voice-agent.neymar020510.workers.dev/
+
 ### macOS / Linuxでの起動
 
 リポジトリ直下から、別々のターミナルで実行します。初回は `Test-LiveKit/.env.example` を `.env` にコピーして認証情報を設定してください（既存の `.env` は上書きしません）。
@@ -198,12 +201,6 @@ uv run --locked pytest -q
 ```powershell
 cd fronted-test
 npm run build
-```
-
-```powershell
-cd cloudflare
-npm ci
-npm run check
 ```
 
 テストでは外部 API、実際の Gmail アカウント、マイクは使用しません。実環境での音声会話・Gmail 操作には、各サービスの有効な認証情報が必要です。
