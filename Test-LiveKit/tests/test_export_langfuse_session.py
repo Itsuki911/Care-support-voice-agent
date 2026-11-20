@@ -79,6 +79,14 @@ def test_sanitize_filename_component_prevents_traversal():
         exporter.sanitize_filename_component("...")
 
 
+def test_build_default_output_path_prefixes_date(tmp_path):
+    from datetime import datetime
+
+    fixed = datetime(2026, 11, 20, 17, 5, 30)
+    path = exporter.build_default_output_path("sess-abc", tmp_path, now=fixed)
+    assert path == tmp_path / "2026-11-20_170530_langfuse_session_sess-abc.json"
+
+
 def test_main_reports_missing_credentials(monkeypatch, capsys):
     monkeypatch.setattr(exporter, "load_dotenv", lambda *a, **kw: False)
     for var in ("LANGFUSE_PUBLIC_KEY", "LANGFUSE_SECRET_KEY", "LANGFUSE_BASE_URL", "LANGFUSE_HOST"):

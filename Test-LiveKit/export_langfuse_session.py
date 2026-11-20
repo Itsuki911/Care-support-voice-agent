@@ -22,6 +22,7 @@ import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable
 
@@ -176,6 +177,18 @@ def export_full_session(
     return export_payload
 
 
+def build_default_output_path(
+    session_id: str,
+    output_dir: Path = DEFAULT_EXPORT_DIR,
+    *,
+    now: datetime | None = None,
+) -> Path:
+    """Build a date-prefixed export filename like 2026-11-20_170500_langfuse_session_<id>.json."""
+    safe_name = sanitize_filename_component(session_id)
+    timestamp = (now or datetime.now()).strftime("%Y-%m-%d_%H%M%S")
+    return output_dir / f"{timestamp}_langfuse_session_{safe_name}.json"
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(BASE_DIR / ".env", override=False)
 
@@ -226,8 +239,9 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    safe_name = sanitize_filename_component(args.session_id)
-    output_path = args.output or (args.output_dir / f"langfuse_session_{safe_name}.json")
+    output_path = args.output or build_default_output_path(
+        args.session_id, args.output_dir
+    )
 
     try:
         payload = export_full_session(
