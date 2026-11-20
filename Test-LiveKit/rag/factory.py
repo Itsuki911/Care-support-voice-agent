@@ -10,6 +10,7 @@ from database.connection import DatabaseManager
 from memory.interfaces.embedding_provider import BaseEmbeddingProvider
 from memory.providers.ollama_embedding import OllamaEmbeddingProvider
 from rag.chunkers.recursive_chunker import RecursiveTextChunker
+from rag.observability import NOOP_RAG_TRACER, RAGTracer
 from rag.parsers.document_parser import LocalDocumentParser
 from rag.repositories.postgres_repository import PostgresRAGRepository
 from rag.services.ingestion import DocumentIngestionService
@@ -64,6 +65,7 @@ class RAGRuntime:
     ingestion: DocumentIngestionService
     retriever: RAGRetrieverService
     service: PostgresRAGService
+    tracer: RAGTracer = NOOP_RAG_TRACER
 
     async def close(self) -> None:
         if self.owns_db:
@@ -75,6 +77,7 @@ def create_rag_runtime(
     *,
     db: DatabaseManager | None = None,
     embedding_provider: BaseEmbeddingProvider | None = None,
+    tracer: RAGTracer | None = None,
 ) -> RAGRuntime:
     """Build a complete local PostgreSQL + pgvector + Ollama RAG runtime.
 
@@ -82,6 +85,7 @@ def create_rag_runtime(
     to share connection pools without coupling RAG and Memory services.
     """
     cfg = settings or RAGSettings.from_env()
+    active_tracer = tracer or NOOP_RAG_TRACER
     owns_db = db is None
     active_db = db or DatabaseManager(cfg.database_url)
     active_embedder = embedding_provider or OllamaEmbeddingProvider(
@@ -101,17 +105,20 @@ def create_rag_runtime(
         chunker=chunker,
         embedding_provider=active_embedder,
         repository=repository,
+        tracer=active_tracer,
     )
     retriever = RAGRetrieverService(
         repository=repository,
         embedding_provider=active_embedder,
         default_top_k=cfg.default_top_k,
         default_min_similarity=cfg.similarity_threshold,
+        tracer=active_tracer,
     )
     service = PostgresRAGService(
         ingestion_service=ingestion,
         retriever_service=retriever,
         repository=repository,
+        tracer=active_tracer,
     )
     return RAGRuntime(
         settings=cfg,
@@ -124,4 +131,5 @@ def create_rag_runtime(
         ingestion=ingestion,
         retriever=retriever,
         service=service,
+        tracer=active_tracer,
     )

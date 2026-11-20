@@ -29,6 +29,9 @@ from memory.observability import MemoryTracer
 from memory_tools import MemoryTools, format_recent_memories_for_prompt
 from observability import _allow_pii, flush_traces, setup_langfuse
 from prompt_config import load_prompt
+from rag.factory import RAGRuntime, create_rag_runtime
+from rag.livekit_adapter import RAGTools
+from rag.observability import RAGTracer
 from session_monitor import SessionMonitor
 from transcript_events import TranscriptEventTracker
 from uuid import uuid4
@@ -96,6 +99,7 @@ class TerminalAssistant(Agent):
         instructions: str | None = None,
         gmail_tools: GmailTools | None = None,
         memory_tools: MemoryTools | None = None,
+        rag_tools: RAGTools | None = None,
     ) -> None:
         gmail = gmail_tools or GmailTools(approvals=approvals)
         if instructions is not None:
@@ -106,6 +110,8 @@ class TerminalAssistant(Agent):
         tools = [gmail.search_emails, gmail.read_email, gmail.send_email]
         if memory_tools is not None:
             tools.extend([memory_tools.search_memories, memory_tools.list_recent_memories])
+        if rag_tools is not None:
+            tools.append(rag_tools.search_documents)
         super().__init__(
             tools=tools,
             instructions=prompt_text,
@@ -124,6 +130,29 @@ def _init_memory_runtime(tracer: MemoryTracer | None = None) -> MemoryRuntime | 
         return runtime
     except Exception as exc:
         logger.warning("Memory runtime initialization skipped (continuing without memory): %s", exc)
+        return None
+
+
+def _init_rag_runtime(
+    tracer: RAGTracer | None = None,
+    *,
+    memory_runtime: MemoryRuntime | None = None,
+) -> RAGRuntime | None:
+    """Create RAGRuntime when DATABASE_URL is configured; degrade gracefully otherwise."""
+    if os.getenv("RAG_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}:
+        return None
+    if not os.getenv("DATABASE_URL", "").strip():
+        return None
+    try:
+        return create_rag_runtime(
+            db=memory_runtime.db if memory_runtime is not None else None,
+            embedding_provider=(
+                memory_runtime.embedding_provider if memory_runtime is not None else None
+            ),
+            tracer=tracer,
+        )
+    except Exception as exc:
+        logger.warning("RAG runtime initialization skipped (continuing without RAG): %s", exc)
         return None
 
 
@@ -183,8 +212,11 @@ async def entrypoint(ctx: JobContext) -> None:
         prompt_version=prompt.version,
         prompt_hash=prompt.digest,
     )
-    memory_tracer = MemoryTracer(trace_provider, allow_content=_allow_pii())
+    allow_pii = _allow_pii()
+    memory_tracer = MemoryTracer(trace_provider, allow_content=allow_pii)
+    rag_tracer = RAGTracer(trace_provider, allow_content=allow_pii)
     memory_runtime = _init_memory_runtime(memory_tracer)
+    rag_runtime = _init_rag_runtime(rag_tracer, memory_runtime=memory_runtime)
     recorded_messages: list[ConversationMessage] = []
     memory_committed = False
 
@@ -440,6 +472,11 @@ async def entrypoint(ctx: JobContext) -> None:
                 await session.aclose()
                 monitor.finish(session, reason)
             finally:
+                if rag_runtime is not None:
+                    try:
+                        await rag_runtime.close()
+                    except Exception:
+                        logger.warning("Failed to close RAG runtime cleanly", exc_info=True)
                 if memory_runtime is not None:
                     try:
                         await memory_runtime.close()
@@ -470,12 +507,19 @@ async def entrypoint(ctx: JobContext) -> None:
             if memory_runtime is not None
             else None
         )
+        rag_corpus_id = os.getenv("RAG_CORPUS_ID", "").strip() or None
+        session_rag_tools = (
+            RAGTools(rag_runtime.service, corpus_id=rag_corpus_id)
+            if rag_runtime is not None
+            else None
+        )
         start_kwargs: dict[str, object] = {
             "agent": TerminalAssistant(
                 None if ctx.is_fake_job() else approvals,
                 prompt,
                 instructions=initial_instructions,
                 memory_tools=session_memory_tools,
+                rag_tools=session_rag_tools,
             ),
             "room": ctx.room,
         }

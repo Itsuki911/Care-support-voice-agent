@@ -10,6 +10,7 @@ from typing import Any
 from rag.interfaces.rag_service import BaseRAGService
 from rag.interfaces.repository import BaseRAGRepository
 from rag.models.rag import DocumentRecord, IngestResult, RetrievalResult, SearchResponse
+from rag.observability import NOOP_RAG_TRACER, RAGTracer
 from rag.services.ingestion import DocumentIngestionService
 from rag.services.retriever import RAGRetrieverService
 
@@ -25,10 +26,12 @@ class PostgresRAGService(BaseRAGService):
         ingestion_service: DocumentIngestionService,
         retriever_service: RAGRetrieverService,
         repository: BaseRAGRepository,
+        tracer: RAGTracer | None = None,
     ) -> None:
         self._ingestion = ingestion_service
         self._retriever = retriever_service
         self._repository = repository
+        self._tracer = tracer or NOOP_RAG_TRACER
 
     async def ingest_document(
         self,
@@ -99,7 +102,10 @@ class PostgresRAGService(BaseRAGService):
         return await self._repository.list_documents(corpus_id=corpus_id, limit=limit)
 
     async def delete_document(self, document_id: uuid.UUID) -> bool:
-        return await self._repository.delete_document(document_id)
+        with self._tracer.span("rag.delete", document_id=str(document_id)) as span:
+            deleted = await self._repository.delete_document(document_id)
+            span.set(deleted=deleted)
+            return deleted
 
     async def delete_corpus(self, corpus_id: str) -> bool:
         return await self._repository.delete_corpus(corpus_id)

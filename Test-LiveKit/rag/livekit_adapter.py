@@ -24,7 +24,7 @@ class RAGTools:
         self,
         rag_service: BaseRAGService,
         *,
-        corpus_id: str = "default",
+        corpus_id: str | None = None,
         min_similarity: float = 0.0,
     ) -> None:
         self._service = rag_service
