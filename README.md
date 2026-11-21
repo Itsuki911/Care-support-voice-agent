@@ -101,8 +101,10 @@ Copy-Item .env.example .env
 
 ```env
 OPENROUTER_API_KEY=...
-OPENROUTER_MODEL=anthropic/claude-haiku-5.5
+OPENROUTER_MODEL=openai/gpt-6-luna
 ```
+
+> **モデル変更メモ（2026-11-21）**: 既定の `OPENROUTER_MODEL` を `anthropic/claude-haiku-5.5` から `openai/gpt-6-luna` へ変更しました。`livekit-plugins-openai` の `openai.LLM.with_openrouter()` における自動 Prompt Caching（`prompt_cache_breakpoints='auto'`）は OpenAI `gpt-5.6` 以降のモデルのみを対象としており、OpenAI モデルへ切り替えることでコード変更なしにキャッシュ制御を有効化できるためです。
 
 次に実行します。
 

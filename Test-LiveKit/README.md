@@ -20,7 +20,9 @@ uv sync
 Copy-Item .env.example .env
 ```
 
-`.env` を編集し、OpenRouter の `OPENROUTER_API_KEY` と `OPENROUTER_MODEL` を設定してください。LLM の `OPENROUTER_MODEL` は OpenRouter のモデル ID（例: `anthropic/claude-haiku-5.5`）です。テキスト専用コンソールでは、この 2 つだけで起動できます。
+`.env` を編集し、OpenRouter の `OPENROUTER_API_KEY` と `OPENROUTER_MODEL` を設定してください。LLM の `OPENROUTER_MODEL` は OpenRouter のモデル ID（例: `openai/gpt-6-luna`）です。テキスト専用コンソールでは、この 2 つだけで起動できます。
+
+> **モデル変更と理由**: 以前は `anthropic/claude-haiku-5.5` を例示していましたが、`livekit-plugins-openai`（`openai.LLM.with_openrouter()`）の自動 Prompt Caching（`prompt_cache_breakpoints='auto'`）が OpenAI `gpt-5.6` 以降のモデルでのみ有効になるため、`openai/gpt-6-luna` へ変更しました。
 
 音声モードには、LiveKit Cloud プロジェクトの `LIVEKIT_URL`、`LIVEKIT_API_KEY`、`LIVEKIT_API_SECRET` と、LiveKit Inference の `STT_MODEL`、`TTS_MODEL`、`TTS_VOICE` が必要です。`STT_MODEL` と `TTS_MODEL` は `provider/model` 形式、`TTS_VOICE` は選択した TTS プロバイダーの音声 ID です。
 

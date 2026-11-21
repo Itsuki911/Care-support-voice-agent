@@ -73,6 +73,11 @@ class ApprovalManager:
         if op.state == 'pending':
             self._state(op, 'approved' if allow else 'denied')
             op.decision.set()
+            # Refresh TTL for the next queued item so it doesn't expire while waiting in queue.
+            next_op = next((item for item in self.operations.values() if item.state == 'pending'), None)
+            if next_op is not None:
+                next_op.expires_at = time.time() + self.ttl
+                next_op.deadline = time.monotonic() + self.ttl
         return op.state
 
     def close(self):
@@ -101,10 +106,17 @@ class ApprovalManager:
         self._state(op, 'selected')
         self._state(op, 'pending')
         try:
-            try:
-                await asyncio.wait_for(op.decision.wait(), timeout=self.ttl)
-            except asyncio.TimeoutError:
-                self._state(op, 'expired')
+            while not op.decision.is_set():
+                remaining = op.deadline - time.monotonic()
+                if remaining <= 0:
+                    self._state(op, 'expired')
+                    break
+                try:
+                    await asyncio.wait_for(op.decision.wait(), timeout=remaining)
+                except asyncio.TimeoutError:
+                    if time.monotonic() >= op.deadline:
+                        self._state(op, 'expired')
+                        break
             self._expire(op)
             if self.closed or op.state != 'approved':
                 raise ToolError(f'外部操作は実行していません（{op.state}）。')

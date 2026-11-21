@@ -45,6 +45,12 @@ if sys.platform == "win32":
     # psycopg 3 async requires SelectorEventLoop on Windows instead of ProactorEventLoop.
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+try:
+    # Pre-import psycopg adapters at module load so entrypoint() does not block the event loop.
+    import psycopg.types.net  # noqa: F401
+except ImportError:
+    pass
+
 
 # override=False により、OS 側で明示的に指定した環境変数を .env で上書きしない。
 load_dotenv(override=False)
@@ -298,8 +304,18 @@ async def entrypoint(ctx: JobContext) -> None:
     # OpenRouter は OpenAI 互換の Chat Completions API を提供している。
     # LiveKit の OpenAI プラグイン経由で接続するため、API キーは
     # OPENROUTER_API_KEY、モデル名は OPENROUTER_MODEL で切り替えられる。
+    # prompt_cache_key を指定し、OpenAI (gpt-5.6+) では prompt_cache_breakpoints='auto' を活用する。
+    llm_instance = openai.LLM.with_openrouter(
+        model=settings.openrouter_model,
+        prompt_cache_key=f"care-support:{prompt.version}",
+    )
+    if settings.openrouter_model.startswith("anthropic/"):
+        opts = getattr(llm_instance, "_opts", None)
+        extra_body = getattr(opts, "extra_body", None)
+        if isinstance(extra_body, dict):
+            extra_body.setdefault("cache_control", {"type": "ephemeral"})
     session_options = {
-        "llm": openai.LLM.with_openrouter(model=settings.openrouter_model),
+        "llm": llm_instance,
     }
     if use_voice:
         # 音声専用セッションのみ、STT（音声→文字）、TTS（文字→音声）、

@@ -175,7 +175,13 @@ def setup_langfuse(
             "x-langfuse-ingestion-version": "4",
         },
     )
-    exporter = ReportingExporter(otlp_exporter, load_prices())
+    current_ctx = trace_api.get_current_span().get_span_context()
+    unexported_parent_id = current_ctx.span_id if current_ctx and current_ctx.is_valid else None
+    exporter = ReportingExporter(
+        otlp_exporter,
+        load_prices(),
+        unexported_parent_id=unexported_parent_id,
+    )
     provider = (
         TracerProvider(resource=Resource.create({"service.name": "care-support-voice-agent"}))
         if TracerProvider is _SDK_TRACER_PROVIDER

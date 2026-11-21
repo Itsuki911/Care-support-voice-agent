@@ -34,7 +34,15 @@ def load_prices() -> dict:
         return {}
 
 
-def enrich(span, prices: dict, *, root_context=None, orphan_parent_id=None, trace_io=None):
+def enrich(
+    span,
+    prices: dict,
+    *,
+    root_context=None,
+    orphan_parent_id=None,
+    unexported_parent_id=None,
+    trace_io=None,
+):
     attrs = dict(span.attributes or {})
     attrs['langfuse.trace.name'] = 'care-support-conversation'
     if 'lk.speech_id' in attrs:
@@ -55,12 +63,15 @@ def enrich(span, prices: dict, *, root_context=None, orphan_parent_id=None, trac
     elif root_context is not None and span.context.span_id != root_context.span_id:
         if parent is None or (orphan_parent_id is not None and parent.span_id == orphan_parent_id):
             parent = root_context
+    elif parent is not None and unexported_parent_id is not None and parent.span_id == unexported_parent_id:
+        parent = None
 
-    if span.name == 'llm_request':
+    if span.name == 'llm_request' or attrs.get('langfuse.observation.type') == 'generation':
         attrs['langfuse.observation.type'] = 'generation'
-        model = attrs.get('gen_ai.response.model') or attrs.get('gen_ai.request.model', 'unknown')
+        model = attrs.get('gen_ai.response.model') or attrs.get('gen_ai.request.model') or attrs.get('langfuse.observation.model.name', 'unknown')
         attrs['langfuse.observation.model.name'] = model
-        attrs['langfuse.observation.metadata.provider'] = attrs.get('gen_ai.provider.name', 'unknown')
+        if span.name == 'llm_request' or 'gen_ai.provider.name' in attrs:
+            attrs['langfuse.observation.metadata.provider'] = attrs.get('gen_ai.provider.name', 'unknown')
         total_input = attrs.get('gen_ai.usage.input_tokens')
         output = attrs.get('gen_ai.usage.output_tokens')
         attrs['langfuse.observation.metadata.cost_source'] = 'unavailable_or_langfuse_model_price'
@@ -95,9 +106,10 @@ def enrich(span, prices: dict, *, root_context=None, orphan_parent_id=None, trac
 
 
 class ReportingExporter(SpanExporter):
-    def __init__(self, exporter, prices=None):
+    def __init__(self, exporter, prices=None, *, unexported_parent_id=None):
         self.exporter = exporter
         self.prices = prices or {}
+        self.unexported_parent_id = unexported_parent_id
         self.accepted = 0
         self.failed = 0
         self._lock = Lock()
@@ -133,6 +145,7 @@ class ReportingExporter(SpanExporter):
                     self.prices,
                     root_context=self._trace_roots.get(span.context.trace_id),
                     orphan_parent_id=self._orphan_parents.get(span.context.trace_id),
+                    unexported_parent_id=self.unexported_parent_id,
                     trace_io=self._trace_io.get(span.context.trace_id),
                 )
                 for span in spans
