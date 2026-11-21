@@ -1,14 +1,26 @@
 {
   "anthropic/claude-haiku-5.5": {
-    "input_per_million": 0.10,
-    "output_per_million": 0.50,
-    "cached_input_per_million": 0.01,
-    "cache_creation_input_per_million": 0.125
-  },
-  "anthropic/claude-haiku-4.5": {
-    "input_per_million": 1.00,
-    "output_per_million": 5.00,
-    "cached_input_per_million": 0.10,
+    "input_per_million": 1.0,
+    "output_per_million": 5.0,
+    "cached_input_per_million": 0.1,
     "cache_creation_input_per_million": 1.25
+  },
+  "anthropic/claude-sonnet-4.5": {
+    "input_per_million": 3.0,
+    "output_per_million": 15.0,
+    "cached_input_per_million": 0.3,
+    "cache_creation_input_per_million": 3.75
+  },
+  "openai/gpt-4o-mini": {
+    "input_per_million": 0.15,
+    "output_per_million": 0.6
+  },
+  "openai/gpt-4.1-mini": {
+    "input_per_million": 0.4,
+    "output_per_million": 1.6
+  },
+  "google/gemini-2.5-flash": {
+    "input_per_million": 0.15,
+    "output_per_million": 0.6
   }
 }

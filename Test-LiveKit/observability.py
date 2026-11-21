@@ -18,6 +18,7 @@ from typing import Any
 from livekit.agents.telemetry import set_tracer_provider
 from opentelemetry import trace as trace_api
 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+from opentelemetry.sdk.resources import Resource
 from opentelemetry.sdk.trace import Span, SpanProcessor, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from trace_export import ReportingExporter, load_prices
@@ -46,6 +47,7 @@ _LLM_UNIT_COST_PER_1M: dict[str, tuple[float, float]] = {
     "openai/gpt-4o-mini": (0.15, 0.60),
     "openai/gpt-4.1-mini": (0.40, 1.60),
     "google/gemini-2.5-flash": (0.15, 0.60),
+    "anthropic/claude-haiku-5.5": (1.00, 5.00),
     "anthropic/claude-sonnet-4.5": (3.00, 15.00),
 }
 _STT_COST_PER_SECOND: dict[str, float] = {
@@ -174,7 +176,11 @@ def setup_langfuse(
         },
     )
     exporter = ReportingExporter(otlp_exporter, load_prices())
-    provider = TracerProvider()
+    provider = (
+        TracerProvider(resource=Resource.create({"service.name": "care-support-voice-agent"}))
+        if TracerProvider is _SDK_TRACER_PROVIDER
+        else TracerProvider()
+    )
     provider.export_diagnostics = exporter
     provider.add_span_processor(BatchSpanProcessor(exporter))
     if isinstance(provider, _SDK_TRACER_PROVIDER):

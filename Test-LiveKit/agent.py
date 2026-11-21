@@ -13,6 +13,7 @@ import asyncio
 import json
 import logging
 import os
+import sys
 from dataclasses import dataclass
 
 # .env に置いた API キーやモデル名を Python の環境変数として読み込む。
@@ -38,6 +39,11 @@ from uuid import uuid4
 
 
 logger = logging.getLogger("care-support-voice-agent")
+
+
+if sys.platform == "win32":
+    # psycopg 3 async requires SelectorEventLoop on Windows instead of ProactorEventLoop.
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 
 # override=False により、OS 側で明示的に指定した環境変数を .env で上書きしない。

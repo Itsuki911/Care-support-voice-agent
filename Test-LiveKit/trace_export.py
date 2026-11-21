@@ -83,8 +83,10 @@ def enrich(span, prices: dict, *, root_context=None, orphan_parent_id=None, trac
         if isinstance(ttft, (int, float)) and ttft >= 0 and span.start_time:
             from datetime import datetime, timezone
             attrs['langfuse.observation.completion_start_time'] = datetime.fromtimestamp(span.start_time / 1e9 + ttft, timezone.utc).isoformat()
-    if span.status.is_ok is False:
+    if span.status.is_ok is False or attrs.get('lk.function_tool.is_error') is True:
         attrs['langfuse.observation.level'] = 'ERROR'
+        if not span.status.description and attrs.get('lk.function_tool.is_error') is True:
+            attrs.setdefault('langfuse.observation.status_message', 'Tool execution returned an error')
     return ReadableSpan(name=span.name, context=span.context, parent=parent,
                         resource=span.resource, attributes=attrs, events=span.events,
                         links=span.links, kind=span.kind, status=span.status,

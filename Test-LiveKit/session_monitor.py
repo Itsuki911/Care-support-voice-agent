@@ -30,8 +30,8 @@ class SessionMonitor:
         span.set_attribute('tool.state', state)
         span.add_event(state)
         if state in ('denied', 'expired', 'cancelled', 'succeeded', 'failed', 'result_unknown'):
-            if state in ('failed', 'result_unknown'):
-                span.set_status(trace.Status(trace.StatusCode.ERROR))
+            if state in ('failed', 'result_unknown', 'expired', 'cancelled'):
+                span.set_status(trace.Status(trace.StatusCode.ERROR, f'Tool approval {state}'))
             span.end()
             self.tools.pop(execution_id, None)
 

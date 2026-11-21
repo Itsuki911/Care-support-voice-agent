@@ -53,6 +53,7 @@ class ApprovalManager:
         active = [op for op in self.operations.values() if op.state == 'pending']
         recent = list(self.operations.values())[-10:]
         return {'session_id': self.session_id, 'closed': self.closed,
+                'pending_count': len(active),
                 'proposal': self._view(active[0]) if active else None,
                 'operations': [{'execution_id': op.execution_id, 'tool': op.tool,
                                 'state': op.state} for op in recent]}

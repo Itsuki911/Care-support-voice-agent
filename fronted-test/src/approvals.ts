@@ -1,7 +1,7 @@
 import { ParticipantKind, Room, RoomEvent } from 'livekit-client';
 
 type Proposal = { execution_id: string; tool: string; arguments: Record<string, unknown>; expires_at: number; state: string };
-type Snapshot = { session_id: string; closed: boolean; proposal: Proposal | null; operations: {execution_id: string; tool: string; state: string}[] };
+type Snapshot = { session_id: string; closed: boolean; pending_count?: number; proposal: Proposal | null; operations: {execution_id: string; tool: string; state: string}[] };
 const labels: Record<string, string> = {
   search_emails: 'Gmailを検索', read_email: 'メール本文を取得', send_email: 'メールを送信',
   selected: '選択', pending: '承認待ち', approved: '承認済み', denied: '拒否', expired: '期限切れ',
@@ -40,7 +40,9 @@ export function attachApprovals(room: Room, container: HTMLElement): () => void 
       if (!data.proposal) { clearPending('承認待ちの外部操作はありません。'); return; }
       const item = data.proposal;
       const remaining = Math.max(0, Math.ceil(item.expires_at - Date.now() / 1000));
-      status.textContent = `承認待ち（残り約${remaining}秒）。拒否しても会話は続けられます。`;
+      const queued = Math.max(0, (data.pending_count ?? 1) - 1);
+      const queueNote = queued > 0 ? `（他に ${queued} 件の承認待ちがあります）` : '';
+      status.textContent = `承認待ち（残り約${remaining}秒）${queueNote}。拒否しても会話は続けられます。`;
       if (displayed === item.execution_id) return;
       displayed = item.execution_id;
       const heading = document.createElement('h2');
