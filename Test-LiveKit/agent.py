@@ -509,7 +509,11 @@ async def entrypoint(ctx: JobContext) -> None:
     try:
         initial_instructions = await load_initial_instructions()
         session_memory_tools = (
-            MemoryTools(memory_runtime.service, get_memory_user_id)
+            MemoryTools(
+                memory_runtime.service,
+                get_memory_user_id,
+                get_session_id=lambda: session_id,
+            )
             if memory_runtime is not None
             else None
         )

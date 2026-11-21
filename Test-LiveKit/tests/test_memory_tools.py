@@ -37,6 +37,8 @@ def test_format_recent_memories_respects_max_items_and_rules():
     prompt_section = format_recent_memories_for_prompt(records, max_items=5)
     assert "直近のユーザー記憶" in prompt_section
     assert "明示的な指示があった場合のみ" in prompt_section
+    assert "save_memory" in prompt_section
+    assert "自動で長期メモリへ抽出・保存" in prompt_section
     assert "記憶 1" in prompt_section
     assert "記憶 5" in prompt_section
     assert "記憶 6" not in prompt_section
@@ -228,5 +230,31 @@ def test_agent_entrypoint_injects_recent_memories_and_commits_only_on_end_sessio
         )
         await callbacks2[0]()
         assert enqueued == []
+
+    asyncio.run(scenario())
+
+
+def test_memory_tools_save_memory_and_fallback():
+    async def scenario():
+        saved_record = _make_record("コーヒーはブラックが好き", memory_type=MemoryType.PREFERENCE)
+        service = SimpleNamespace(add_memory=AsyncMock(return_value=saved_record))
+        tools = MemoryTools(service, lambda: "taro-01", get_session_id=lambda: "sess-xyz")
+
+        res = await tools.save_memory(content="コーヒーはブラックが好き", memory_type="preference", importance=0.9)
+        assert res["ok"] is True
+        assert res["content"] == "コーヒーはブラックが好き"
+        assert res["memory_type"] == "preference"
+        created_arg = service.add_memory.await_args.args[0]
+        assert created_arg.user_id == "taro-01"
+        assert created_arg.source_session_id == "sess-xyz"
+        assert created_arg.importance == 0.9
+
+        blank = await tools.save_memory(content="   ")
+        assert blank["ok"] is False
+
+        failing_service = SimpleNamespace(add_memory=AsyncMock(side_effect=RuntimeError("db down")))
+        failing_tools = MemoryTools(failing_service, lambda: "taro-01")
+        err = await failing_tools.save_memory(content="メモ")
+        assert err["ok"] is False
 
     asyncio.run(scenario())
