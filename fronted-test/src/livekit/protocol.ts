@@ -27,6 +27,7 @@ export interface AgentStatusEvent {
   seq: number;
   timestamp: number;
   label: string;
+  detail?: string;
 }
 
 export interface ApprovalRequestPayload {
@@ -168,4 +169,52 @@ export function applyStatusEvent(
   const next = [...events];
   next[index] = incoming;
   return next;
+}
+
+const ACTIVE_STATUSES = new Set(['selected', 'pending', 'approved', 'running']);
+
+export function isActiveStatus(status: string): boolean {
+  return ACTIVE_STATUSES.has(status);
+}
+
+export function finalizeActiveStatusEvents(events: AgentStatusEvent[]): AgentStatusEvent[] {
+  return events.map((ev) =>
+    isActiveStatus(ev.status) ? { ...ev, status: 'cancelled' } : ev,
+  );
+}
+
+const STATUS_BADGE_TEXT: Record<string, string> = {
+  selected: '選択',
+  pending: '承認待ち',
+  approved: '承認済み',
+  running: '実行中',
+  completed: '完了',
+  succeeded: '完了',
+  failed: '失敗',
+  denied: '拒否',
+  expired: '期限切れ',
+  cancelled: 'キャンセル',
+  result_unknown: '結果不明',
+};
+
+export function getStatusBadgeText(status: string): string {
+  return STATUS_BADGE_TEXT[status] || status;
+}
+
+export function formatStatusLabel(ev: AgentStatusEvent): string {
+  if (ev.label) return ev.label;
+  switch (ev.kind) {
+    case 'thinking':
+      return isActiveStatus(ev.status) ? '文章を考え中…' : '思考完了';
+    case 'speaking':
+      return isActiveStatus(ev.status) ? '回答中…' : '回答完了';
+    case 'web_search':
+      return isActiveStatus(ev.status) ? 'Web を検索中…' : 'Web 検索';
+    case 'rag':
+      return isActiveStatus(ev.status) ? 'ローカル文書を検索中…' : '文書検索';
+    case 'memory':
+      return isActiveStatus(ev.status) ? '記憶を確認中…' : '記憶処理';
+    default:
+      return ev.kind;
+  }
 }

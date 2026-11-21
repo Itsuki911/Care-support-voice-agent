@@ -1,7 +1,7 @@
 # Care Support Voice Agent — ポートフォリオ技術解説・開発履歴
 
-> **対象範囲**: 本ドキュメントは `development plan/roadmap.md` および Git コミット履歴・各種設計資料に基づき、現時点で実装・検証済みの **Level 0 〜 Level 3B（Tavily Web 検索まで）** の範囲をまとめています（未着手の **Level 3B の GCP 移行** および **Level 4: ツール進捗ストリーミング表示** は対象外としています）。  
-> **最終更新日**: 2026-11-21（基準コミット: `d7f8293` ＋ Level 3B Tavily Web 検索追加）
+> **対象範囲**: 本ドキュメントは `development plan/roadmap.md` および Git コミット履歴・各種設計資料に基づき、現時点で実装・検証済みの **Level 0 〜 Level 4** の範囲をまとめています（未着手の **Level 3B の GCP 移行** は今後の展望としています）。  
+> **最終更新日**: 2026-11-21（基準コミット: `286ba95` ＋ Level 4 AI Elements ストリーミング進捗表示）
 
 ---
 
@@ -43,7 +43,7 @@
 
 | レイヤー | 採用技術 | 役割・選定理由 |
 | --- | --- | --- |
-| **フロントエンド** | React 19, TypeScript, Vite, `livekit-client`, `@assistant-ui/react`, `@ai-sdk/react` | リアルタイム文字起こし表示と承認 UI を構築。音声処理は LiveKit 側に任せ、UI は表示と承認操作に専念 |
+| **フロントエンド** | React 19, TypeScript, Vite, `livekit-client`, `@assistant-ui/react`, `@ai-sdk/react`, AI Elements (`ChainOfThought` / `@radix-ui/react-collapsible`) | リアルタイム文字起こし、承認 UI、および開閉可能な処理進捗表示を構築。音声処理は LiveKit 側に任せ、UI は表示と承認操作に専念 |
 | **リアルタイム基盤** | LiveKit Cloud, LiveKit Agents (Python), LiveKit Inference | 低遅延な WebRTC 音声通信、STT/TTS/VAD、およびエージェントのターン制御 |
 | **トークン発行 API** | FastAPI, Uvicorn | ブラウザ参加者用の短命 LiveKit トークンを発行（秘密鍵をブラウザに渡さない設計） |
 | **LLM** | OpenRouter (`openai/gpt-6-luna`) | モデル差し替えの容易さと、`livekit-plugins-openai` の自動 Prompt Caching 対応 |
@@ -102,6 +102,14 @@
   - ローカル文書検索（`search_documents`）と使い分け、1セッションあたりの検索回数上限（既定5回）・タイムアウト（10秒）・結果件数上限（5件）を制御。
   - 検索結果（`url`, `fetched_at`）および失敗時の `error_type` を OpenTelemetry スパン（`web_search.tavily`）へ記録（API キーや本文 PII は非露出）。
 
+### Level 4: ストリーミング進捗表示（Vercel AI SDK + AI Elements）
+- **バックエンド進捗イベント配信（`agent.py` / `transcript_events.py` / `memory_tools.py` / `rag/livekit_adapter.py`）**:
+  - LiveKit の `agent_state_changed`（`thinking` → 「文章を考え中…」、`speaking` → 「回答中…」）および各ツール（`web_search`: 「Web を検索中…」、`rag`: 「ローカル文書を検索中…」、`memory`: 「記憶を検索／確認／保存中…」、Gmail: 承認待ち〜実行中〜完了）の状態遷移を `agent_status_event` としてリアルタイム配信。
+- **AI Elements による開閉可能な進捗パネル（`fronted-test/src/components/ai-elements/chain-of-thought.tsx` / `App.tsx` / `protocol.ts`）**:
+  - Vercel AI Elements の `ChainOfThought` パターン（`@radix-ui/react-collapsible` + `lucide-react`）を導入し、処理ステップの一覧をワンクリックで開閉可能に実装。
+  - 各ステップの種別アイコン、独自進捗ステータスバッジ（`実行中` / `承認待ち` / `完了` / `失敗` / `拒否` / `キャンセル`）、取得件数などの詳細を表示。
+  - セッション終了・切断時には `finalizeActiveStatusEvents()` により未完了の進行中ステータスを自動で `cancelled` へ収束させ、「実行中」のまま残る問題を防止。
+
 ---
 
 ## 4. 開発履歴（Git コミット履歴ベース）
@@ -154,4 +162,3 @@
 ## 6. 今後の展望（次フェーズ）
 
 - **Level 3B（残り）**: 将来の GCP 移行設計（Cloud SQL / Memory Bank / Vertex AI RAG 等）。
-- **Level 4**: `assistant-ui` の Tool UI を活用した、Memory / RAG / 外部ツールの実行進捗ストリーミング表示。

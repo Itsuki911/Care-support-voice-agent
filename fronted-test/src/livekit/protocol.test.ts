@@ -3,6 +3,10 @@ import { describe, expect, it } from 'vitest';
 import {
   applyStatusEvent,
   applyTranscriptEvent,
+  finalizeActiveStatusEvents,
+  formatStatusLabel,
+  getStatusBadgeText,
+  isActiveStatus,
   type AgentStatusEvent,
   type TranscriptEvent,
   type VoiceUIMessage,
@@ -210,5 +214,35 @@ describe('applyStatusEvent', () => {
 
     expect(events).toHaveLength(1);
     expect(events[0].status).toBe('executed');
+  });
+
+  it('finalizes active statuses on disconnect and formats custom progress labels', () => {
+    const running: AgentStatusEvent = {
+      type: 'agent_status_event',
+      session_id: 'room-1',
+      turn_id: 'turn-1',
+      execution_id: 'web-1',
+      kind: 'web_search',
+      status: 'running',
+      seq: 1,
+      timestamp: 100,
+      label: '',
+    };
+    const done: AgentStatusEvent = {
+      ...running,
+      execution_id: 'mem-1',
+      kind: 'memory',
+      status: 'completed',
+      seq: 2,
+      label: '記憶の検索完了',
+    };
+    expect(isActiveStatus(running.status)).toBe(true);
+    expect(formatStatusLabel(running)).toBe('Web を検索中…');
+    expect(getStatusBadgeText(running.status)).toBe('実行中');
+
+    const finalized = finalizeActiveStatusEvents([running, done]);
+    expect(finalized[0].status).toBe('cancelled');
+    expect(finalized[1].status).toBe('completed');
+    expect(getStatusBadgeText(finalized[0].status)).toBe('キャンセル');
   });
 });

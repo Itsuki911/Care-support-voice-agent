@@ -8,6 +8,8 @@ cannot be executed as system instructions.
 from __future__ import annotations
 
 import logging
+from typing import Callable
+from uuid import uuid4
 
 from livekit.agents import function_tool
 
@@ -26,10 +28,22 @@ class RAGTools:
         *,
         corpus_id: str | None = None,
         min_similarity: float = 0.0,
+        on_status: Callable[..., None] | None = None,
     ) -> None:
         self._service = rag_service
         self._corpus_id = corpus_id
         self._min_similarity = min_similarity
+        self._on_status = on_status
+
+    def _emit_status(self, status: str, execution_id: str, label: str, detail: str | None = None) -> None:
+        if self._on_status is not None:
+            self._on_status(
+                kind="rag",
+                status=status,
+                execution_id=execution_id,
+                label=label,
+                detail=detail,
+            )
 
     @function_tool
     async def search_documents(self, query: str, top_k: int = 5) -> dict:
@@ -42,6 +56,8 @@ class RAGTools:
         if not cleaned:
             return {"ok": True, "count": 0, "context": "", "sources": []}
         safe_k = max(1, min(top_k, 10))
+        exec_id = f"rag-{uuid4().hex[:8]}"
+        self._emit_status("running", exec_id, "ローカル文書を検索中…")
         try:
             response = await self._service.search(
                 cleaned,
@@ -51,6 +67,7 @@ class RAGTools:
             )
         except Exception as exc:
             logger.warning("search_documents tool failed (graceful fallback): %s", exc)
+            self._emit_status("failed", exec_id, "文書検索に失敗")
             return {
                 "ok": False,
                 "error": "文書データベースに一時的に接続できませんでした。",
@@ -58,6 +75,7 @@ class RAGTools:
                 "context": "",
                 "sources": [],
             }
+        self._emit_status("completed", exec_id, "文書検索完了", f"{len(response.results)}件")
 
         sources = [
             {

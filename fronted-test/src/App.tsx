@@ -9,10 +9,21 @@ import { useAISDKRuntime } from '@assistant-ui/react-ai-sdk';
 import { Room, RoomEvent, Track } from 'livekit-client';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
+import {
+  ChainOfThought,
+  ChainOfThoughtContent,
+  ChainOfThoughtHeader,
+  ChainOfThoughtStep,
+  type StepStatus,
+} from './components/ai-elements/chain-of-thought';
 import { LiveKitChatTransport } from './livekit/chatTransport';
 import {
   applyStatusEvent,
   applyTranscriptEvent,
+  finalizeActiveStatusEvents,
+  formatStatusLabel,
+  getStatusBadgeText,
+  isActiveStatus,
   type AgentStatusEvent,
   type ApprovalRequestPayload,
   type TranscriptEvent,
@@ -93,6 +104,7 @@ export function App() {
   const [connecting, setConnecting] = useState(false);
   const [approval, setApproval] = useState<ApprovalRequestPayload | null>(null);
   const [statusEvents, setStatusEvents] = useState<AgentStatusEvent[]>([]);
+  const [progressOpen, setProgressOpen] = useState(true);
 
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
   const activeRoomRef = useRef<Room | undefined>(undefined);
@@ -119,6 +131,7 @@ export function App() {
     setConnecting(false);
     setTextDraft('');
     setStatusText(message);
+    setStatusEvents((prev) => finalizeActiveStatusEvents(prev));
     audioContainerRef.current?.replaceChildren();
   }
 
@@ -408,15 +421,50 @@ export function App() {
         </section>
       )}
 
-      {statusEvents.length > 0 && (
-        <section className="status-events" aria-label="処理状態">
-          {statusEvents.map((ev) => (
-            <span key={ev.execution_id} className="status-pill">
-              {ev.label || ev.kind}: {ev.status}
-            </span>
-          ))}
-        </section>
-      )}
+      {statusEvents.length > 0 && (() => {
+        const activeSteps = statusEvents.filter((ev) => isActiveStatus(ev.status));
+        const latestActive = activeSteps[activeSteps.length - 1];
+        const headerLabel = latestActive
+          ? formatStatusLabel(latestActive)
+          : `処理ステップ（${statusEvents.length}件）`;
+
+        const toStepStatus = (status: string): StepStatus => {
+          if (status === 'running' || status === 'approved') return 'active';
+          if (status === 'pending' || status === 'selected') return 'pending';
+          if (
+            status === 'failed' ||
+            status === 'denied' ||
+            status === 'expired' ||
+            status === 'cancelled' ||
+            status === 'result_unknown'
+          ) {
+            return 'error';
+          }
+          return 'complete';
+        };
+
+        return (
+          <section className="status-events" aria-label="処理ステータス">
+            <ChainOfThought open={progressOpen} onOpenChange={setProgressOpen}>
+              <ChainOfThoughtHeader isActive={activeSteps.length > 0}>
+                {headerLabel}
+              </ChainOfThoughtHeader>
+              <ChainOfThoughtContent>
+                {statusEvents.slice(-12).map((ev) => (
+                  <ChainOfThoughtStep
+                    key={ev.execution_id}
+                    kind={ev.kind}
+                    status={toStepStatus(ev.status)}
+                    label={formatStatusLabel(ev)}
+                    badgeText={getStatusBadgeText(ev.status)}
+                    detail={ev.detail}
+                  />
+                ))}
+              </ChainOfThoughtContent>
+            </ChainOfThought>
+          </section>
+        );
+      })()}
 
       <AssistantRuntimeProvider runtime={runtime}>
         <ThreadPrimitive.Root className="chat-thread">

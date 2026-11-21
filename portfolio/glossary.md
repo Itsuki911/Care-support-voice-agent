@@ -44,10 +44,10 @@
 - **詳しい解説**: **React** は画面部品（コンポーネント）を作るライブラリ、**TypeScript** は型チェックでバグを防ぐ JavaScript の拡張言語、**Vite** は高速な開発サーバー＆ビルドツールです。
 - **このシステムでの使われ方**: `fronted-test/` のブラウザ UI をこれらで構築しています。
 
-### assistant-ui / Vercel AI SDK
-- **一言で**: AI チャット UI を効率よく作るための React ライブラリ群。
-- **詳しい解説**: ストリーミング表示、メッセージ履歴、ツール状態表示など、AI アプリ特有の UI パターンを標準化できます。
-- **このシステムでの使われ方**: Level 1 のチャット形式の文字起こし表示基盤として `fronted-test/` に導入しています。
+### assistant-ui / Vercel AI SDK / AI Elements（ChainOfThought）
+- **一言で**: AI チャット UI と、思考・検索ステップの開閉表示を作るためのライブラリ群。
+- **詳しい解説**: Vercel AI SDK と assistant-ui でメッセージやストリーミング状態を管理し、Vercel 公式の **AI Elements**（`ChainOfThought` コンポーネント）で「今 AI が何をしているか（考え中・Web 検索中・ツール実行中など）」を折りたたみ可能なステップ一覧として表示できます。
+- **このシステムでの使われ方**: Level 1 のチャット UI 基盤に加え、Level 4 で `@radix-ui/react-collapsible` と `lucide-react` ベースの `ChainOfThought` を導入し、リアルタイムの進捗ステータスを開閉表示しています。
 
 ---
 

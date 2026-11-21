@@ -118,10 +118,11 @@ class TranscriptEventTracker:
         status: str,
         execution_id: str,
         label: str = "",
+        detail: str | None = None,
         timestamp: float | None = None,
     ) -> dict[str, Any]:
         """Build a shared status event payload (reused by Memory/RAG/Web search in Level 2-4)."""
-        return {
+        payload: dict[str, Any] = {
             "type": "agent_status_event",
             "session_id": self.session_id,
             "turn_id": self._current_turn_id,
@@ -132,3 +133,6 @@ class TranscriptEventTracker:
             "timestamp": timestamp if timestamp is not None else time.time(),
             "label": label,
         }
+        if detail:
+            payload["detail"] = detail
+        return payload

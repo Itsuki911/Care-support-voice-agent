@@ -199,3 +199,121 @@ button:disabled {
   color: #656d76;
   text-align: center;
 }
+
+/* Level 4: AI Elements ChainOfThought collapsible streaming status */
+.ai-cot {
+  width: 100%;
+  border: 1px solid #d0dce2;
+  border-radius: 10px;
+  background: #f8fbfd;
+  overflow: hidden;
+}
+
+.ai-cot-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 0.9rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: #1f333d;
+  text-align: left;
+}
+
+.ai-cot-header:hover {
+  background: #eef5f9;
+}
+
+.ai-cot-header-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ai-cot-chevron {
+  transition: transform 0.2s ease;
+}
+
+.ai-cot-header[data-state='open'] .ai-cot-chevron {
+  transform: rotate(180deg);
+}
+
+.ai-cot-content {
+  border-top: 1px solid #e2ecf1;
+  padding: 0.5rem 0.9rem 0.75rem;
+}
+
+.ai-cot-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.ai-cot-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.87rem;
+  color: #2c434f;
+}
+
+.ai-cot-step-icon {
+  display: inline-flex;
+  color: #4f6b78;
+}
+
+.ai-cot-step-label {
+  flex: 1;
+}
+
+.ai-cot-step-detail {
+  font-size: 0.78rem;
+  color: #5b727d;
+}
+
+.ai-cot-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.ai-cot-badge-active {
+  background: #dff0ff;
+  color: #0b5394;
+}
+
+.ai-cot-badge-pending {
+  background: #fff3cd;
+  color: #7a5800;
+}
+
+.ai-cot-badge-complete {
+  background: #e2f5ea;
+  color: #166534;
+}
+
+.ai-cot-badge-error {
+  background: #fde8e8;
+  color: #9b1c1c;
+}
+
+.ai-cot-spin {
+  animation: ai-cot-rotate 1s linear infinite;
+}
+
+@keyframes ai-cot-rotate {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -341,19 +341,62 @@ async def entrypoint(ctx: JobContext) -> None:
 
     monitor = SessionMonitor(trace_provider, session_id, mode=session_mode)
 
-    def observe_tool_state(execution_id: str, tool: str, state: str) -> None:
-        monitor.tool_state(execution_id, tool, state)
+    def emit_status(
+        kind: str,
+        status: str,
+        execution_id: str,
+        label: str,
+        detail: str | None = None,
+    ) -> None:
         status_event = transcript_tracker.make_status_event(
-            kind="tool",
-            status=state,
+            kind=kind,
+            status=status,
             execution_id=execution_id,
-            label=tool,
+            label=label,
+            detail=detail,
         )
         try:
             loop = asyncio.get_running_loop()
         except RuntimeError:
             return
         loop.create_task(publish_json_data(status_event))
+
+    _TOOL_LABELS: dict[str, dict[str, str]] = {
+        "search_web": {
+            "pending": "Web 検索の承認待ち",
+            "running": "Web を検索中…",
+            "succeeded": "Web 検索完了",
+            "failed": "Web 検索に失敗",
+            "denied": "Web 検索が拒否されました",
+            "expired": "Web 検索の承認が期限切れ",
+            "cancelled": "Web 検索をキャンセル",
+        },
+        "search_emails": {
+            "pending": "Gmail 検索の承認待ち",
+            "running": "Gmail を検索中…",
+            "succeeded": "Gmail 検索完了",
+        },
+        "read_email": {
+            "pending": "メール取得の承認待ち",
+            "running": "メール本文を取得中…",
+            "succeeded": "メール取得完了",
+        },
+        "send_email": {
+            "pending": "メール送信の承認待ち",
+            "running": "メールを送信中…",
+            "succeeded": "メール送信完了",
+        },
+    }
+
+    def observe_tool_state(execution_id: str, tool: str, state: str) -> None:
+        monitor.tool_state(execution_id, tool, state)
+        kind = "web_search" if tool == "search_web" else "tool"
+        label = _TOOL_LABELS.get(tool, {}).get(state, tool)
+        emit_status(kind, state, execution_id, label)
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            return
         if state == "pending":
             op = approvals.operations.get(execution_id)
             if op is not None:
@@ -367,6 +410,10 @@ async def entrypoint(ctx: JobContext) -> None:
                 elif tool == "read_email":
                     target = f"メールID: {args.get('message_id', '')}"
                     summary = "指定メールの本文を取得（既読にはしません）"
+                    reversible = True
+                elif tool == "search_web":
+                    target = "Web 検索（Tavily）"
+                    summary = f"検索クエリ: {args.get('query', '')}（最大 {args.get('max_results', 5)} 件）"
                     reversible = True
                 else:
                     target = "Gmail 受信トレイ検索"
@@ -446,6 +493,20 @@ async def entrypoint(ctx: JobContext) -> None:
                 user_id_state["user_id"] = identity.strip()
 
         ctx.room.on("participant_connected", handle_participant_connected)
+
+    @session.on("agent_state_changed")
+    def handle_agent_state_changed(event: object) -> None:
+        old_state = str(getattr(event, "old_state", ""))
+        new_state = str(getattr(event, "new_state", ""))
+        turn_id = transcript_tracker._current_turn_id
+        if old_state == "thinking" and new_state != "thinking":
+            emit_status("thinking", "completed", f"think-{turn_id}", "思考完了")
+        if old_state == "speaking" and new_state != "speaking":
+            emit_status("speaking", "completed", f"speak-{turn_id}", "回答完了")
+        if new_state == "thinking":
+            emit_status("thinking", "running", f"think-{turn_id}", "文章を考え中…")
+        elif new_state == "speaking":
+            emit_status("speaking", "running", f"speak-{turn_id}", "回答中…")
 
     @session.on("user_input_transcribed")
     def handle_user_transcribed(event: object) -> None:
@@ -539,13 +600,14 @@ async def entrypoint(ctx: JobContext) -> None:
                 memory_runtime.service,
                 get_memory_user_id,
                 get_session_id=lambda: session_id,
+                on_status=emit_status,
             )
             if memory_runtime is not None
             else None
         )
         rag_corpus_id = os.getenv("RAG_CORPUS_ID", "").strip() or None
         session_rag_tools = (
-            RAGTools(rag_runtime.service, corpus_id=rag_corpus_id)
+            RAGTools(rag_runtime.service, corpus_id=rag_corpus_id, on_status=emit_status)
             if rag_runtime is not None
             else None
         )

@@ -12,8 +12,10 @@
     "@ai-sdk/react": "^4.0.181",
     "@assistant-ui/react": "^0.15.37",
     "@assistant-ui/react-ai-sdk": "^1.4.24",
+    "@radix-ui/react-collapsible": "^1.2.1",
     "ai": "^7.0.177",
     "livekit-client": "^2.24.0",
+    "lucide-react": "^1.77.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },

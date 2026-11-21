@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 from typing import Callable
+from uuid import uuid4
 
 from livekit.agents import function_tool
 
@@ -57,10 +58,22 @@ class MemoryTools:
         memory_service: BaseMemoryService,
         get_user_id: Callable[[], str],
         get_session_id: Callable[[], str | None] | None = None,
+        on_status: Callable[..., None] | None = None,
     ) -> None:
         self._service = memory_service
         self._get_user_id = get_user_id
         self._get_session_id = get_session_id
+        self._on_status = on_status
+
+    def _emit_status(self, status: str, execution_id: str, label: str, detail: str | None = None) -> None:
+        if self._on_status is not None:
+            self._on_status(
+                kind="memory",
+                status=status,
+                execution_id=execution_id,
+                label=label,
+                detail=detail,
+            )
 
     @function_tool
     async def search_memories(self, query: str, limit: int = 5) -> dict:
@@ -74,18 +87,22 @@ class MemoryTools:
             return {"ok": True, "memories": [], "count": 0}
         safe_limit = max(1, min(limit, 20))
         user_id = self._get_user_id()
+        exec_id = f"mem-search-{uuid4().hex[:8]}"
+        self._emit_status("running", exec_id, "記憶を検索中…")
         try:
             results = await self._service.search_memory(
                 user_id, cleaned_query, limit=safe_limit
             )
         except Exception as exc:
             logger.warning("search_memories tool failed (graceful fallback): %s", exc)
+            self._emit_status("failed", exec_id, "記憶の検索に失敗")
             return {
                 "ok": False,
                 "error": "記憶データベースに一時的に接続できませんでした。",
                 "memories": [],
                 "count": 0,
             }
+        self._emit_status("completed", exec_id, "記憶の検索完了", f"{len(results)}件")
 
         items = [
             {
@@ -109,16 +126,20 @@ class MemoryTools:
         """
         safe_limit = max(1, min(limit, 20))
         user_id = self._get_user_id()
+        exec_id = f"mem-list-{uuid4().hex[:8]}"
+        self._emit_status("running", exec_id, "直近の記憶を確認中…")
         try:
             records = await self._service.list_memories(user_id, limit=safe_limit)
         except Exception as exc:
             logger.warning("list_recent_memories tool failed (graceful fallback): %s", exc)
+            self._emit_status("failed", exec_id, "記憶の確認に失敗")
             return {
                 "ok": False,
                 "error": "記憶データベースに一時的に接続できませんでした。",
                 "memories": [],
                 "count": 0,
             }
+        self._emit_status("completed", exec_id, "記憶の確認完了", f"{len(records)}件")
 
         items = [
             {
@@ -157,6 +178,8 @@ class MemoryTools:
         user_id = self._get_user_id()
         session_id = self._get_session_id() if self._get_session_id is not None else None
 
+        exec_id = f"mem-save-{uuid4().hex[:8]}"
+        self._emit_status("running", exec_id, "記憶を保存中…")
         try:
             record = await self._service.add_memory(
                 MemoryCreate(
@@ -170,10 +193,12 @@ class MemoryTools:
             )
         except Exception as exc:
             logger.warning("save_memory tool failed (graceful fallback): %s", exc)
+            self._emit_status("failed", exec_id, "記憶の保存に失敗")
             return {
                 "ok": False,
                 "error": "記憶データベースに一時的に接続できませんでした。",
             }
+        self._emit_status("completed", exec_id, "記憶を保存完了")
 
         return {
             "ok": True,
