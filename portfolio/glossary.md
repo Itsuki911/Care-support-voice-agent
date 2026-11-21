@@ -65,7 +65,12 @@
 ### Function Calling（Tool Use / `@function_tool`）
 - **一言で**: LLM が外部のプログラム（ツール）を呼び出して結果を受け取る仕組み。
 - **詳しい解説**: LLM 単体ではメールを読んだり DB を検索したりできませんが、関数をツールとして登録しておくと、LLM が必要な引数を選んで呼び出してくれます。
-- **このシステムでの使われ方**: `search_emails` / `read_email` / `send_email`（Gmail）、`search_memories` / `list_recent_memories` / `save_memory`（記憶）、`search_documents`（RAG）をツールとして提供しています。
+- **このシステムでの使われ方**: `search_emails` / `read_email` / `send_email`（Gmail）、`search_memories` / `list_recent_memories` / `save_memory`（記憶）、`search_documents`（RAG）、`search_web`（Tavily Web 検索）をツールとして提供しています。
+
+### Tavily
+- **一言で**: AI エージェント向けに設計された高精度な Web 検索 API。
+- **詳しい解説**: 一般的な検索エンジンと異なり、LLM がそのまま扱いやすいタイトル・URL・要約テキスト（スニペット）・スコアを構造化 JSON で返してくれます。業界で広く利用されており検索品質が高いのが特徴です。
+- **このシステムでの使われ方**: Level 3B として `Test-LiveKit/web_search_tools.py` に組み込み、ローカル文書に無い最新情報を調べる際に `ApprovalManager`（人間の承認）を経て呼び出します。
 
 ### System Prompt（システムプロンプト）
 - **一言で**: AI にあらかじめ与えておく「役割・性格・ルール」の指示書。

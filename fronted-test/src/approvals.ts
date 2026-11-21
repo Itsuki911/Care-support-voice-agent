@@ -3,7 +3,7 @@ import { ParticipantKind, Room, RoomEvent } from 'livekit-client';
 type Proposal = { execution_id: string; tool: string; arguments: Record<string, unknown>; expires_at: number; state: string };
 type Snapshot = { session_id: string; closed: boolean; pending_count?: number; proposal: Proposal | null; operations: {execution_id: string; tool: string; state: string}[] };
 const labels: Record<string, string> = {
-  search_emails: 'Gmailを検索', read_email: 'メール本文を取得', send_email: 'メールを送信',
+  search_emails: 'Gmailを検索', read_email: 'メール本文を取得', send_email: 'メールを送信', search_web: 'Webを検索',
   selected: '選択', pending: '承認待ち', approved: '承認済み', denied: '拒否', expired: '期限切れ',
   cancelled: 'キャンセル', running: '実行中', succeeded: '完了', failed: '失敗', result_unknown: '結果不明（自動再送しません）',
 };
@@ -51,7 +51,11 @@ export function attachApprovals(room: Room, container: HTMLElement): () => void 
       // External/LLM-controlled strings are text, never HTML.
       details.textContent = JSON.stringify(item.arguments, null, 2);
       const notice = document.createElement('p');
-      notice.textContent = item.tool === 'send_email' ? '送信後は取り消せません。宛先・件名・本文を確認してください。' : '表示された条件で外部のGmailへアクセスします。取得済みデータの取得を取り消すことはできません。';
+      notice.textContent = item.tool === 'send_email'
+        ? '送信後は取り消せません。宛先・件名・本文を確認してください。'
+        : item.tool === 'search_web'
+          ? '表示されたクエリで外部の Web 検索（Tavily）を実行します。'
+          : '表示された条件で外部のGmailへアクセスします。取得済みデータの取得を取り消すことはできません。';
       const allow = document.createElement('button');
       const deny = document.createElement('button');
       allow.type = deny.type = 'button';

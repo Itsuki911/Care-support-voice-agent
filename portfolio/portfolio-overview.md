@@ -1,7 +1,7 @@
 # Care Support Voice Agent — ポートフォリオ技術解説・開発履歴
 
-> **対象範囲**: 本ドキュメントは `development plan/roadmap.md` および Git コミット履歴・各種設計資料に基づき、現時点で実装・検証済みの **Level 0 〜 Level 3A** の範囲をまとめています（未着手の **Level 3B: Web検索・GCP移行** および **Level 4: ツール進捗ストリーミング表示** は対象外としています）。  
-> **最終更新日**: 2026-11-21（基準コミット: `d7f8293`）
+> **対象範囲**: 本ドキュメントは `development plan/roadmap.md` および Git コミット履歴・各種設計資料に基づき、現時点で実装・検証済みの **Level 0 〜 Level 3B（Tavily Web 検索まで）** の範囲をまとめています（未着手の **Level 3B の GCP 移行** および **Level 4: ツール進捗ストリーミング表示** は対象外としています）。  
+> **最終更新日**: 2026-11-21（基準コミット: `d7f8293` ＋ Level 3B Tavily Web 検索追加）
 
 ---
 
@@ -47,7 +47,7 @@
 | **リアルタイム基盤** | LiveKit Cloud, LiveKit Agents (Python), LiveKit Inference | 低遅延な WebRTC 音声通信、STT/TTS/VAD、およびエージェントのターン制御 |
 | **トークン発行 API** | FastAPI, Uvicorn | ブラウザ参加者用の短命 LiveKit トークンを発行（秘密鍵をブラウザに渡さない設計） |
 | **LLM** | OpenRouter (`openai/gpt-6-luna`) | モデル差し替えの容易さと、`livekit-plugins-openai` の自動 Prompt Caching 対応 |
-| **外部ツール連携** | Gmail API, Google OAuth 2.0 | メールの検索・本文取得・送信（すべて承認ゲート経由） |
+| **外部ツール連携** | Gmail API (Google OAuth 2.0), Tavily Search API | メール操作および Web 検索（いずれも `ApprovalManager` の承認ゲート経由） |
 | **データベース / 検索** | PostgreSQL, `pgvector` (HNSW), SQLAlchemy 2.x (async), `psycopg` 3, Alembic | 会話履歴・長期記憶・RAG チャンクを単一 DB で管理し、スキーマをマイグレーションで版管理 |
 | **埋め込みモデル** | Ollama (`embeddinggemma-2:270m`, 768次元) | ローカル環境で完結する高速・低コストな日本語ベクトル生成 |
 | **監視・評価** | OpenTelemetry, Langfuse v4, `pytest`, `vitest` | レイテンシ・トークン・コスト・エラーの定量観測と、自動テストによる回帰防止 |
@@ -94,6 +94,13 @@
 - **検索と評価**:
   - LiveKit ツール `search_documents` としてエージェントへ統合。
   - `scripts/evaluate_rag.py` およびテスト用日本語 PDF フィクスチャにより、検索精度・レイテンシ（埋め込み時間 / DB 検索時間）を定量評価可能にした。
+
+### Level 3B: Web 検索（Tavily）
+- **採用理由**: OpenAI Responses API のサーバーサイド `WebSearch` は自動実行されるため承認フローを挟めない一方、**Tavily** は業界で幅広く利用されており検索品質が高く、REST API 経由で `ApprovalManager`（Human-in-the-Loop）と組み合わせられるため採用。
+- **実装内容（`web_search_tools.py` / `fronted-test/src/approvals.ts`）**:
+  - `TAVILY_API_KEY` 設定時に `search_web` ツールを有効化し、実行前に必ずブラウザ承認 UI で許可を取得。
+  - ローカル文書検索（`search_documents`）と使い分け、1セッションあたりの検索回数上限（既定5回）・タイムアウト（10秒）・結果件数上限（5件）を制御。
+  - 検索結果（`url`, `fetched_at`）および失敗時の `error_type` を OpenTelemetry スパン（`web_search.tavily`）へ記録（API キーや本文 PII は非露出）。
 
 ---
 
@@ -146,5 +153,5 @@
 
 ## 6. 今後の展望（次フェーズ）
 
-- **Level 3B**: Web 検索ツールの追加（承認ゲート・URL/取得日時記録付き）および将来の GCP 移行設計。
+- **Level 3B（残り）**: 将来の GCP 移行設計（Cloud SQL / Memory Bank / Vertex AI RAG 等）。
 - **Level 4**: `assistant-ui` の Tool UI を活用した、Memory / RAG / 外部ツールの実行進捗ストリーミング表示。

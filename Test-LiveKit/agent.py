@@ -35,6 +35,7 @@ from rag.livekit_adapter import RAGTools
 from rag.observability import RAGTracer
 from session_monitor import SessionMonitor
 from transcript_events import TranscriptEventTracker
+from web_search_tools import WebSearchTools
 from uuid import uuid4
 
 
@@ -112,6 +113,7 @@ class TerminalAssistant(Agent):
         gmail_tools: GmailTools | None = None,
         memory_tools: MemoryTools | None = None,
         rag_tools: RAGTools | None = None,
+        web_search_tools: WebSearchTools | None = None,
     ) -> None:
         gmail = gmail_tools or GmailTools(approvals=approvals)
         if instructions is not None:
@@ -121,9 +123,17 @@ class TerminalAssistant(Agent):
             prompt_text = prompt.text
         tools = [gmail.search_emails, gmail.read_email, gmail.send_email]
         if memory_tools is not None:
-            tools.extend([memory_tools.search_memories, memory_tools.list_recent_memories])
+            tools.extend(
+                [
+                    memory_tools.search_memories,
+                    memory_tools.list_recent_memories,
+                    memory_tools.save_memory,
+                ]
+            )
         if rag_tools is not None:
             tools.append(rag_tools.search_documents)
+        if web_search_tools is not None:
+            tools.append(web_search_tools.search_web)
         super().__init__(
             tools=tools,
             instructions=prompt_text,
@@ -539,6 +549,14 @@ async def entrypoint(ctx: JobContext) -> None:
             if rag_runtime is not None
             else None
         )
+        session_web_search_tools = (
+            WebSearchTools(
+                approvals=None if ctx.is_fake_job() else approvals,
+                tracer_provider=trace_provider,
+            )
+            if os.getenv("TAVILY_API_KEY", "").strip()
+            else None
+        )
         start_kwargs: dict[str, object] = {
             "agent": TerminalAssistant(
                 None if ctx.is_fake_job() else approvals,
@@ -546,6 +564,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 instructions=initial_instructions,
                 memory_tools=session_memory_tools,
                 rag_tools=session_rag_tools,
+                web_search_tools=session_web_search_tools,
             ),
             "room": ctx.room,
         }
