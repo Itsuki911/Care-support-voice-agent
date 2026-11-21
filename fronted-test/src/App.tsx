@@ -7,7 +7,7 @@ import {
 } from '@assistant-ui/react';
 import { useAISDKRuntime } from '@assistant-ui/react-ai-sdk';
 import { Room, RoomEvent, Track } from 'livekit-client';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   ChainOfThought,
@@ -34,12 +34,106 @@ import {
 const decoder = new TextDecoder();
 const encoder = new TextEncoder();
 
+function getVoiceMeta(message: unknown): VoiceMessageMetadata | undefined {
+  const meta = (message as { metadata?: { custom?: VoiceMessageMetadata } | VoiceMessageMetadata } | undefined)
+    ?.metadata;
+  if (!meta) return undefined;
+  return 'custom' in meta && meta.custom ? meta.custom : (meta as VoiceMessageMetadata);
+}
+
+function toStepStatus(status: string): StepStatus {
+  if (status === 'running' || status === 'approved') return 'active';
+  if (status === 'pending' || status === 'selected') return 'pending';
+  if (
+    status === 'failed' ||
+    status === 'denied' ||
+    status === 'expired' ||
+    status === 'cancelled' ||
+    status === 'result_unknown'
+  ) {
+    return 'error';
+  }
+  return 'complete';
+}
+
+interface TurnUIContextValue {
+  statusEvents: AgentStatusEvent[];
+  approval: ApprovalRequestPayload | null;
+  onApprovalDecision: (approved: boolean) => void;
+  latestUserMessageId?: string;
+}
+
+const TurnUIContext = createContext<TurnUIContextValue>({
+  statusEvents: [],
+  approval: null,
+  onApprovalDecision: () => {},
+});
+
+function TurnProgressPanel({ events }: { events: AgentStatusEvent[] }) {
+  const [open, setOpen] = useState(true);
+  if (events.length === 0) return null;
+  const activeSteps = events.filter((ev) => isActiveStatus(ev.status));
+  const latestActive = activeSteps[activeSteps.length - 1];
+  const headerLabel = latestActive
+    ? formatStatusLabel(latestActive)
+    : `処理ステップ（${events.length}件）`;
+
+  return (
+    <section className="status-events" aria-label="処理ステータス">
+      <ChainOfThought open={open} onOpenChange={setOpen}>
+        <ChainOfThoughtHeader isActive={activeSteps.length > 0}>
+          {headerLabel}
+        </ChainOfThoughtHeader>
+        <ChainOfThoughtContent>
+          {events.slice(-12).map((ev) => (
+            <ChainOfThoughtStep
+              key={ev.execution_id}
+              kind={ev.kind}
+              status={toStepStatus(ev.status)}
+              label={formatStatusLabel(ev)}
+              badgeText={getStatusBadgeText(ev.status)}
+              detail={ev.detail}
+            />
+          ))}
+        </ChainOfThoughtContent>
+      </ChainOfThought>
+    </section>
+  );
+}
+
+function ApprovalPanel({
+  approval,
+  onDecision,
+}: {
+  approval: ApprovalRequestPayload;
+  onDecision: (approved: boolean) => void;
+}) {
+  return (
+    <section id="approval-panel" className="approval-panel" aria-live="polite">
+      <h2>外部操作の許可確認</h2>
+      <p>操作: {approval.tool_name}</p>
+      <p>対象: {approval.target}</p>
+      <pre>{approval.summary}</pre>
+      <p>
+        {approval.reversible
+          ? '読み取り・検索操作です。'
+          : '送信後は取り消せません。内容をよく確認してください。'}
+      </p>
+      <div className="controls">
+        <button type="button" onClick={() => onDecision(true)}>
+          許可する
+        </button>
+        <button type="button" onClick={() => onDecision(false)}>
+          拒否する
+        </button>
+      </div>
+    </section>
+  );
+}
+
 function UtteranceBadge() {
   const message = useAuiState((s) => s.message);
-  const meta = (message as unknown as { metadata?: { custom?: VoiceMessageMetadata } | VoiceMessageMetadata })
-    ?.metadata;
-  const voiceMeta =
-    meta && 'custom' in meta && meta.custom ? meta.custom : (meta as VoiceMessageMetadata | undefined);
+  const voiceMeta = getVoiceMeta(message);
   if (!voiceMeta?.status) return null;
   if (voiceMeta.status === 'interim') {
     return <span className="badge badge-interim">認識中…</span>;
@@ -51,16 +145,37 @@ function UtteranceBadge() {
 }
 
 function UserMessage() {
+  const message = useAuiState((s) => s.message);
+  const voiceMeta = getVoiceMeta(message);
+  const { statusEvents, approval, onApprovalDecision, latestUserMessageId } =
+    useContext(TurnUIContext);
+
+  const isLatestUser = Boolean(latestUserMessageId && message?.id === latestUserMessageId);
+  const turnEvents = statusEvents.filter((ev) =>
+    voiceMeta?.turnId ? ev.turn_id === voiceMeta.turnId : isLatestUser && ev.turn_id !== 'turn-0',
+  );
+  const showApproval = Boolean(approval && isLatestUser);
+
   return (
-    <MessagePrimitive.Root className="chat-message chat-user">
-      <div className="chat-meta">
-        <strong>ユーザー</strong>
-        <UtteranceBadge />
-      </div>
-      <div className="chat-body">
-        <MessagePrimitive.Content />
-      </div>
-    </MessagePrimitive.Root>
+    <div className="chat-user-group">
+      <MessagePrimitive.Root className="chat-message chat-user">
+        <div className="chat-meta">
+          <strong>ユーザー</strong>
+          <UtteranceBadge />
+        </div>
+        <div className="chat-body">
+          <MessagePrimitive.Content />
+        </div>
+      </MessagePrimitive.Root>
+      {(turnEvents.length > 0 || showApproval) && (
+        <div className="chat-turn-attachments">
+          <TurnProgressPanel events={turnEvents} />
+          {showApproval && approval && (
+            <ApprovalPanel approval={approval} onDecision={onApprovalDecision} />
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -104,7 +219,6 @@ export function App() {
   const [connecting, setConnecting] = useState(false);
   const [approval, setApproval] = useState<ApprovalRequestPayload | null>(null);
   const [statusEvents, setStatusEvents] = useState<AgentStatusEvent[]>([]);
-  const [progressOpen, setProgressOpen] = useState(true);
 
   const audioContainerRef = useRef<HTMLDivElement | null>(null);
   const activeRoomRef = useRef<Room | undefined>(undefined);
@@ -399,92 +513,55 @@ export function App() {
         </div>
       </header>
 
-      {approval && (
-        <section id="approval-panel" className="approval-panel" aria-live="polite">
-          <h2>外部操作の許可確認</h2>
-          <p>操作: {approval.tool_name}</p>
-          <p>対象: {approval.target}</p>
-          <pre>{approval.summary}</pre>
-          <p>
-            {approval.reversible
-              ? '読み取り・検索操作です。'
-              : '送信後は取り消せません。内容をよく確認してください。'}
-          </p>
-          <div className="controls">
-            <button type="button" onClick={() => void sendApprovalDecision(true)}>
-              許可する
-            </button>
-            <button type="button" onClick={() => void sendApprovalDecision(false)}>
-              拒否する
-            </button>
-          </div>
-        </section>
-      )}
-
-      {statusEvents.length > 0 && (() => {
-        const activeSteps = statusEvents.filter((ev) => isActiveStatus(ev.status));
-        const latestActive = activeSteps[activeSteps.length - 1];
-        const headerLabel = latestActive
-          ? formatStatusLabel(latestActive)
-          : `処理ステップ（${statusEvents.length}件）`;
-
-        const toStepStatus = (status: string): StepStatus => {
-          if (status === 'running' || status === 'approved') return 'active';
-          if (status === 'pending' || status === 'selected') return 'pending';
-          if (
-            status === 'failed' ||
-            status === 'denied' ||
-            status === 'expired' ||
-            status === 'cancelled' ||
-            status === 'result_unknown'
-          ) {
-            return 'error';
-          }
-          return 'complete';
-        };
+      {(() => {
+        const latestUser = [...chat.messages].reverse().find((msg) => msg.role === 'user');
+        const hasUserMessage = Boolean(latestUser);
+        const preUserEvents = hasUserMessage
+          ? statusEvents.filter((ev) => ev.turn_id === 'turn-0')
+          : statusEvents;
 
         return (
-          <section className="status-events" aria-label="処理ステータス">
-            <ChainOfThought open={progressOpen} onOpenChange={setProgressOpen}>
-              <ChainOfThoughtHeader isActive={activeSteps.length > 0}>
-                {headerLabel}
-              </ChainOfThoughtHeader>
-              <ChainOfThoughtContent>
-                {statusEvents.slice(-12).map((ev) => (
-                  <ChainOfThoughtStep
-                    key={ev.execution_id}
-                    kind={ev.kind}
-                    status={toStepStatus(ev.status)}
-                    label={formatStatusLabel(ev)}
-                    badgeText={getStatusBadgeText(ev.status)}
-                    detail={ev.detail}
+          <TurnUIContext.Provider
+            value={{
+              statusEvents,
+              approval,
+              onApprovalDecision: (approved) => {
+                void sendApprovalDecision(approved);
+              },
+              latestUserMessageId: latestUser?.id,
+            }}
+          >
+            {preUserEvents.length > 0 && <TurnProgressPanel events={preUserEvents} />}
+            {!hasUserMessage && approval && (
+              <ApprovalPanel
+                approval={approval}
+                onDecision={(approved) => {
+                  void sendApprovalDecision(approved);
+                }}
+              />
+            )}
+            <AssistantRuntimeProvider runtime={runtime}>
+              <ThreadPrimitive.Root className="chat-thread">
+                <ThreadPrimitive.Viewport className="chat-viewport">
+                  <ThreadPrimitive.Empty>
+                    <p className="chat-empty">
+                      {sessionMode === 'voice'
+                        ? '音声セッションを開始すると、会話の文字起こしがここに表示されます。'
+                        : 'テキストセッションを開始すると、ここでテキストによる会話ができます。'}
+                    </p>
+                  </ThreadPrimitive.Empty>
+                  <ThreadPrimitive.Messages
+                    components={{
+                      UserMessage,
+                      AssistantMessage,
+                    }}
                   />
-                ))}
-              </ChainOfThoughtContent>
-            </ChainOfThought>
-          </section>
+                </ThreadPrimitive.Viewport>
+              </ThreadPrimitive.Root>
+            </AssistantRuntimeProvider>
+          </TurnUIContext.Provider>
         );
       })()}
-
-      <AssistantRuntimeProvider runtime={runtime}>
-        <ThreadPrimitive.Root className="chat-thread">
-          <ThreadPrimitive.Viewport className="chat-viewport">
-            <ThreadPrimitive.Empty>
-              <p className="chat-empty">
-                {sessionMode === 'voice'
-                  ? '音声セッションを開始すると、会話の文字起こしがここに表示されます。'
-                  : 'テキストセッションを開始すると、ここでテキストによる会話ができます。'}
-              </p>
-            </ThreadPrimitive.Empty>
-            <ThreadPrimitive.Messages
-              components={{
-                UserMessage,
-                AssistantMessage,
-              }}
-            />
-          </ThreadPrimitive.Viewport>
-        </ThreadPrimitive.Root>
-      </AssistantRuntimeProvider>
 
       {sessionMode === 'text' && (
         <form
