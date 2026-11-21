@@ -102,6 +102,14 @@ def test_prompt_is_versioned_and_path_is_constrained(monkeypatch):
     with pytest.raises(ValueError): load_prompt()
 
 
+def test_default_prompt_is_v2(monkeypatch):
+    monkeypatch.delenv('SYSTEM_PROMPT_VERSION', raising=False)
+    prompt = load_prompt()
+    assert prompt.version == 'v2'
+    assert 'ローカル文書' in prompt.text
+    assert '承認フロー' in prompt.text
+
+
 def test_agent_session_promoted_to_root_when_job_entrypoint_unexported():
     from opentelemetry import trace as trace_api
 

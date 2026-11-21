@@ -14,7 +14,7 @@ class Prompt:
 
 
 def load_prompt() -> Prompt:
-    version = os.getenv('SYSTEM_PROMPT_VERSION', 'v1')
+    version = os.getenv('SYSTEM_PROMPT_VERSION', 'v2')
     if not re.fullmatch(r'v[0-9]+', version):
         raise ValueError('SYSTEM_PROMPT_VERSION must be v followed by digits')
     text = (Path(__file__).parent / 'prompts' / f'system-{version}.md').read_text(encoding='utf-8').strip()
