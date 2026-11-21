@@ -355,6 +355,12 @@ def main() -> int:
     parser.add_argument("--threshold", type=float, default=0.72)
     args = parser.parse_args()
 
+    # psycopg's asynchronous implementation is incompatible with the default
+    # ProactorEventLoop used by Windows.  Select the compatible loop before
+    # creating the event loop with asyncio.run().
+    if sys.platform == "win32":
+        asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     report = asyncio.run(
         run_evaluation(
             corpus_id=args.corpus,
