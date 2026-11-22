@@ -15,6 +15,7 @@ import logging
 import os
 import sys
 from dataclasses import dataclass
+from pathlib import Path
 
 # .env に置いた API キーやモデル名を Python の環境変数として読み込む。
 # API キーをソースコードへ直接書かないための基本的な安全対策。
@@ -34,6 +35,10 @@ from rag.factory import RAGRuntime, create_rag_runtime
 from rag.livekit_adapter import RAGTools
 from rag.observability import RAGTracer
 from session_monitor import SessionMonitor
+from database.config import MemorySettings
+from database.connection import DatabaseManager
+from secretary.repository import SecretaryRepository
+from secretary.tools import SecretaryTools
 from transcript_events import TranscriptEventTracker
 from web_search_tools import WebSearchTools
 from uuid import uuid4
@@ -114,26 +119,31 @@ class TerminalAssistant(Agent):
         memory_tools: MemoryTools | None = None,
         rag_tools: RAGTools | None = None,
         web_search_tools: WebSearchTools | None = None,
+        secretary_tools: SecretaryTools | None = None,
     ) -> None:
-        gmail = gmail_tools or GmailTools(approvals=approvals)
         if instructions is not None:
             prompt_text = instructions
         else:
             prompt = prompt or load_prompt()
             prompt_text = prompt.text
-        tools = [gmail.search_emails, gmail.read_email, gmail.send_email]
-        if memory_tools is not None:
-            tools.extend(
-                [
-                    memory_tools.search_memories,
-                    memory_tools.list_recent_memories,
-                    memory_tools.save_memory,
-                ]
-            )
-        if rag_tools is not None:
-            tools.append(rag_tools.search_documents)
-        if web_search_tools is not None:
-            tools.append(web_search_tools.search_web)
+        if secretary_tools is not None:
+            # TEST-Secretary mode strictly restricts tools to read-only schedule and task queries.
+            tools = [secretary_tools.get_schedule, secretary_tools.get_tasks]
+        else:
+            gmail = gmail_tools or GmailTools(approvals=approvals)
+            tools = [gmail.search_emails, gmail.read_email, gmail.send_email]
+            if memory_tools is not None:
+                tools.extend(
+                    [
+                        memory_tools.search_memories,
+                        memory_tools.list_recent_memories,
+                        memory_tools.save_memory,
+                    ]
+                )
+            if rag_tools is not None:
+                tools.append(rag_tools.search_documents)
+            if web_search_tools is not None:
+                tools.append(web_search_tools.search_web)
         super().__init__(
             tools=tools,
             instructions=prompt_text,
@@ -214,11 +224,44 @@ async def entrypoint(ctx: JobContext) -> None:
     prompt = load_prompt()
     room_name = getattr(ctx.room, "name", "") or "console"
     is_text_session = room_name.startswith("frontend-test-text-")
+    is_secretary_session = (
+        room_name.startswith("frontend-test-secretary-")
+        or os.getenv("AGENT_MODE", "").strip().lower() == "secretary"
+    )
     use_voice = settings.voice_enabled and not is_text_session
-    session_mode = "text" if is_text_session or not settings.voice_enabled else "voice"
+    if is_secretary_session:
+        session_mode = "secretary"
+    elif is_text_session or not settings.voice_enabled:
+        session_mode = "text"
+    else:
+        session_mode = "voice"
     # A new ID even for console restarts or a reused room prevents mixed sessions.
     session_id = f"{room_name}-{uuid4().hex}"
     transcript_tracker = TranscriptEventTracker(session_id=room_name)
+
+    def _resolve_verified_employee_id() -> str | None:
+        remote_participants = getattr(ctx.room, "remote_participants", None)
+        if not isinstance(remote_participants, dict):
+            return None
+        for participant in remote_participants.values():
+            identity = getattr(participant, "identity", None)
+            if isinstance(identity, str) and identity.startswith("agent-"):
+                continue
+            raw_meta = getattr(participant, "metadata", None)
+            if not isinstance(raw_meta, str) or not raw_meta.strip():
+                continue
+            try:
+                parsed = json.loads(raw_meta)
+            except ValueError:
+                continue
+            if (
+                isinstance(parsed, dict)
+                and parsed.get("secretary_verified") is True
+                and isinstance(parsed.get("employee_id"), str)
+                and parsed["employee_id"].strip()
+            ):
+                return parsed["employee_id"].strip()
+        return None
 
     default_user_id = os.getenv("DEFAULT_MEMORY_USER_ID", "default-user").strip() or "default-user"
     if not ctx.is_fake_job() and hasattr(ctx, "connect") and callable(ctx.connect):
@@ -237,9 +280,20 @@ async def entrypoint(ctx: JobContext) -> None:
     allow_pii = _allow_pii()
     memory_tracer = MemoryTracer(trace_provider, allow_content=allow_pii)
     rag_tracer = RAGTracer(trace_provider, allow_content=allow_pii)
-    memory_runtime = _init_memory_runtime(memory_tracer)
-    rag_runtime = _init_rag_runtime(rag_tracer, memory_runtime=memory_runtime)
+    memory_runtime = None if is_secretary_session else _init_memory_runtime(memory_tracer)
+    rag_runtime = (
+        None
+        if is_secretary_session
+        else _init_rag_runtime(rag_tracer, memory_runtime=memory_runtime)
+    )
+    secretary_db: DatabaseManager | None = None
+    if is_secretary_session:
+        try:
+            secretary_db = DatabaseManager(MemorySettings.from_env().database_url)
+        except Exception:
+            logger.warning("Failed to initialize secretary DatabaseManager", exc_info=True)
     recorded_messages: list[ConversationMessage] = []
+    confirmed_secretary_turns: list[dict[str, Any]] = []
     memory_committed = False
 
     def get_memory_user_id() -> str:
@@ -249,6 +303,9 @@ async def entrypoint(ctx: JobContext) -> None:
         return user_id_state["user_id"]
 
     async def load_initial_instructions() -> str:
+        if is_secretary_session:
+            sec_prompt_path = Path(__file__).resolve().parent / "prompts" / "secretary_v1.txt"
+            return sec_prompt_path.read_text(encoding="utf-8").strip()
         if memory_runtime is None:
             return prompt.text
         recent_limit = _prompt_recent_memory_limit()
@@ -517,6 +574,17 @@ async def entrypoint(ctx: JobContext) -> None:
             timestamp=getattr(event, "created_at", None),
         )
         if payload is not None:
+            if is_secretary_session and payload.get("status") in ("final", "interrupted"):
+                confirmed_secretary_turns.append(
+                    {
+                        "seq": payload.get("seq"),
+                        "turn_id": payload.get("turn_id"),
+                        "role": payload.get("speaker"),
+                        "text": payload.get("text", ""),
+                        "status": payload.get("status"),
+                        "timestamp": payload.get("timestamp"),
+                    }
+                )
             asyncio.create_task(publish_json_data(payload))
 
     def handle_conversation_item(event: object) -> None:
@@ -545,6 +613,17 @@ async def entrypoint(ctx: JobContext) -> None:
             timestamp=getattr(event, "created_at", None),
         )
         if payload is not None:
+            if is_secretary_session and payload.get("status") in ("final", "interrupted"):
+                confirmed_secretary_turns.append(
+                    {
+                        "seq": payload.get("seq"),
+                        "turn_id": payload.get("turn_id"),
+                        "role": payload.get("speaker"),
+                        "text": payload.get("text", ""),
+                        "status": payload.get("status"),
+                        "timestamp": payload.get("timestamp"),
+                    }
+                )
             asyncio.create_task(publish_json_data(payload))
 
     monitor.bind(session, on_conversation_item=handle_conversation_item)
@@ -565,6 +644,30 @@ async def entrypoint(ctx: JobContext) -> None:
                 await session.aclose()
                 monitor.finish(session, reason)
             finally:
+                if secretary_db is not None:
+                    if confirmed_secretary_turns:
+                        try:
+                            transcript_dir = Path(__file__).resolve().parent / "evaluations" / "transcripts"
+                            transcript_dir.mkdir(parents=True, exist_ok=True)
+                            transcript_doc = {
+                                "session_id": session_id,
+                                "room_name": room_name,
+                                "turns": confirmed_secretary_turns,
+                            }
+                            encoded_doc = json.dumps(transcript_doc, ensure_ascii=False, indent=2)
+                            (transcript_dir / f"{session_id}.json").write_text(
+                                encoded_doc, encoding="utf-8"
+                            )
+                            if room_name != session_id:
+                                (transcript_dir / f"{room_name}.json").write_text(
+                                    encoded_doc, encoding="utf-8"
+                                )
+                        except Exception:
+                            logger.warning("Failed to save local secretary transcript", exc_info=True)
+                    try:
+                        await secretary_db.close()
+                    except Exception:
+                        logger.warning("Failed to close secretary DB cleanly", exc_info=True)
                 if rag_runtime is not None:
                     try:
                         await rag_runtime.close()
@@ -616,7 +719,16 @@ async def entrypoint(ctx: JobContext) -> None:
                 approvals=None if ctx.is_fake_job() else approvals,
                 tracer_provider=trace_provider,
             )
-            if os.getenv("TAVILY_API_KEY", "").strip()
+            if not is_secretary_session and os.getenv("TAVILY_API_KEY", "").strip()
+            else None
+        )
+        session_secretary_tools = (
+            SecretaryTools(
+                SecretaryRepository(secretary_db),
+                _resolve_verified_employee_id,
+                on_status=emit_status,
+            )
+            if is_secretary_session and secretary_db is not None
             else None
         )
         start_kwargs: dict[str, object] = {
@@ -627,6 +739,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 memory_tools=session_memory_tools,
                 rag_tools=session_rag_tools,
                 web_search_tools=session_web_search_tools,
+                secretary_tools=session_secretary_tools,
             ),
             "room": ctx.room,
         }

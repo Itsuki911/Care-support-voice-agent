@@ -193,7 +193,20 @@ function AssistantMessage() {
   );
 }
 
-export type SessionMode = 'voice' | 'text';
+export type SessionMode = 'voice' | 'text' | 'secretary';
+
+interface VerifiedEmployee {
+  employee_id: string;
+  employee_name: string;
+  department: string;
+}
+
+const DEFAULT_SESSION_MODE: SessionMode =
+  import.meta.env.VITE_DEFAULT_SESSION_MODE === 'secretary'
+    ? 'secretary'
+    : import.meta.env.VITE_DEFAULT_SESSION_MODE === 'text'
+      ? 'text'
+      : 'voice';
 
 const USER_ID_STORAGE_KEY = 'care-support-user-id';
 const DEFAULT_USER_ID = 'default-user';
@@ -211,8 +224,13 @@ function loadSavedUserId(): string {
 }
 
 export function App() {
-  const [sessionMode, setSessionMode] = useState<SessionMode>('voice');
+  const [sessionMode, setSessionMode] = useState<SessionMode>(DEFAULT_SESSION_MODE);
   const [userId, setUserId] = useState<string>(() => loadSavedUserId());
+  const [employeeName, setEmployeeName] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [verifiedEmployee, setVerifiedEmployee] = useState<VerifiedEmployee | null>(null);
+  const [verifyError, setVerifyError] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
   const [textDraft, setTextDraft] = useState('');
   const [statusText, setStatusText] = useState('停止中');
   const [connected, setConnected] = useState(false);
@@ -243,6 +261,7 @@ export function App() {
     setApproval(null);
     setConnected(false);
     setConnecting(false);
+    setVerifiedEmployee(null);
     setTextDraft('');
     setStatusText(message);
     setStatusEvents((prev) => finalizeActiveStatusEvents(prev));
@@ -285,12 +304,58 @@ export function App() {
     resetSessionUI('会話を終了しました（記憶の保存をバックグラウンドで実行します）。');
   }
 
-  async function handleStart(): Promise<void> {
+  async function handleSecretaryVerifyAndStart(): Promise<void> {
+    const trimmedName = employeeName.trim();
+    const trimmedId = employeeId.trim();
+    if (!trimmedName || !trimmedId) {
+      setVerifyError('氏名と社員IDの両方を入力してください。');
+      return;
+    }
+    setVerifying(true);
+    setVerifyError(null);
+    try {
+      const verifyRes = await fetch('/api/secretary/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ employee_name: trimmedName, employee_id: trimmedId }),
+      });
+      if (!verifyRes.ok) {
+        let message = '氏名または社員IDが一致しません。';
+        try {
+          const errBody = (await verifyRes.json()) as { detail?: string };
+          if (errBody.detail) message = errBody.detail;
+        } catch {
+          // Keep default message.
+        }
+        setVerifyError(message);
+        setVerifiedEmployee(null);
+        return;
+      }
+      const verified = (await verifyRes.json()) as VerifiedEmployee;
+      setVerifiedEmployee(verified);
+      await handleStart({ employee_name: trimmedName, employee_id: trimmedId });
+    } catch {
+      setVerifyError('社員照合サーバーに接続できません。');
+    } finally {
+      setVerifying(false);
+    }
+  }
+
+  async function handleStart(secretaryCreds?: {
+    employee_name: string;
+    employee_id: string;
+  }): Promise<void> {
     const attempt = ++generationRef.current;
     const mode = sessionMode;
     activeModeRef.current = mode;
     setConnecting(true);
-    setStatusText(mode === 'voice' ? '音声セッションに接続中…' : 'テキスト専用セッションに接続中…');
+    setStatusText(
+      mode === 'secretary'
+        ? 'TEST-秘書モードに接続中…'
+        : mode === 'voice'
+          ? '音声セッションに接続中…'
+          : 'テキスト専用セッションに接続中…',
+    );
     setStatusEvents([]);
     setMessagesRef.current([]);
     setTextDraft('');
@@ -298,12 +363,12 @@ export function App() {
 
     const room = new Room();
     activeRoomRef.current = room;
-    transport.setMode(mode);
+    transport.setMode(mode === 'text' ? 'text' : 'voice');
     transport.setRoom(room);
     const controller = new AbortController();
     abortControllerRef.current = controller;
 
-    if (mode === 'voice') {
+    if (mode === 'voice' || mode === 'secretary') {
       room.on(RoomEvent.TrackSubscribed, (track) => {
         if (track.kind === Track.Kind.Audio && audioContainerRef.current) {
           audioContainerRef.current.append(track.attach());
@@ -384,10 +449,18 @@ export function App() {
         await room.startAudio();
       }
       const effectiveUserId = userId.trim() || DEFAULT_USER_ID;
+      const tokenBody =
+        mode === 'secretary'
+          ? {
+              mode,
+              employee_name: secretaryCreds?.employee_name ?? employeeName.trim(),
+              employee_id: secretaryCreds?.employee_id ?? employeeId.trim(),
+            }
+          : { mode, user_id: effectiveUserId };
       const response = await fetch('/api/token', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mode, user_id: effectiveUserId }),
+        body: JSON.stringify(tokenBody),
         signal: controller.signal,
       });
       if (!response.ok) {
@@ -406,7 +479,7 @@ export function App() {
       }
       activeSessionIdRef.current = room.name;
 
-      if (mode === 'voice') {
+      if (mode === 'voice' || mode === 'secretary') {
         await room.localParticipant.setMicrophoneEnabled(true);
         if (attempt !== generationRef.current) {
           await room.disconnect();
@@ -416,9 +489,11 @@ export function App() {
       setConnected(true);
       setConnecting(false);
       setStatusText(
-        mode === 'voice'
-          ? '接続済み（音声専用セッション）。マイクに向かって話してください。'
-          : '接続済み（テキスト専用セッション）。下の入力欄からメッセージを送信してください。',
+        mode === 'secretary'
+          ? `接続済み（TEST-秘書モード / セッション: ${room.name}）。マイクに向かって予定・タスクを質問してください。`
+          : mode === 'voice'
+            ? '接続済み（音声専用セッション）。マイクに向かって話してください。'
+            : '接続済み（テキスト専用セッション）。下の入力欄からメッセージを送信してください。',
       );
     } catch (error) {
       if (attempt !== generationRef.current) return;
@@ -487,25 +562,104 @@ export function App() {
             />
             テキスト専用セッション（チャット入力）
           </label>
+          <label className={`mode-option ${sessionMode === 'secretary' ? 'mode-option-active' : ''}`}>
+            <input
+              type="radio"
+              name="session-mode"
+              value="secretary"
+              checked={sessionMode === 'secretary'}
+              onChange={() => {
+                setSessionMode('secretary');
+                setVerifyError(null);
+              }}
+            />
+            TEST-秘書モード（音声・社員照合）
+          </label>
         </fieldset>
-        <div className="user-id-row">
-          <label htmlFor="user-id-input">ユーザー ID（記憶の紐付け先）:</label>
-          <input
-            id="user-id-input"
-            type="text"
-            className="user-id-input"
-            value={userId}
-            disabled={connected || connecting}
-            placeholder={DEFAULT_USER_ID}
-            onChange={(e) => handleUserIdChange(e.target.value)}
-          />
-        </div>
+        {sessionMode !== 'secretary' ? (
+          <div className="user-id-row">
+            <label htmlFor="user-id-input">ユーザー ID（記憶の紐付け先）:</label>
+            <input
+              id="user-id-input"
+              type="text"
+              className="user-id-input"
+              value={userId}
+              disabled={connected || connecting}
+              placeholder={DEFAULT_USER_ID}
+              onChange={(e) => handleUserIdChange(e.target.value)}
+            />
+          </div>
+        ) : (
+          <form
+            id="secretary-verify-form"
+            className="secretary-login-card"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void handleSecretaryVerifyAndStart();
+            }}
+          >
+            <div className="secretary-login-fields">
+              <label>
+                氏名:
+                <input
+                  id="secretary-employee-name"
+                  type="text"
+                  className="user-id-input"
+                  value={employeeName}
+                  disabled={connected || connecting || verifying}
+                  placeholder="例: 佐藤 花子"
+                  onChange={(e) => setEmployeeName(e.target.value)}
+                />
+              </label>
+              <label>
+                社員 ID:
+                <input
+                  id="secretary-employee-id"
+                  type="text"
+                  className="user-id-input"
+                  value={employeeId}
+                  disabled={connected || connecting || verifying}
+                  placeholder="例: EMP-1001"
+                  onChange={(e) => setEmployeeId(e.target.value)}
+                />
+              </label>
+            </div>
+            {verifiedEmployee && connected && (
+              <p className="secretary-verified-badge">
+                本人確認済み: {verifiedEmployee.employee_name}（{verifiedEmployee.employee_id} /{' '}
+                {verifiedEmployee.department}）
+              </p>
+            )}
+            {verifyError && (
+              <p className="secretary-verify-error" role="alert">
+                {verifyError}
+              </p>
+            )}
+          </form>
+        )}
         <p id="status" role="status" aria-live="polite">
           {statusText}
         </p>
         <div className="controls">
-          <button id="start" type="button" disabled={connected || connecting} onClick={() => void handleStart()}>
-            {sessionMode === 'voice' ? '音声セッションを起動' : 'テキストセッションを起動'}
+          <button
+            id="start"
+            type="button"
+            disabled={connected || connecting || verifying}
+            onClick={() => {
+              if (sessionMode === 'secretary') {
+                void handleSecretaryVerifyAndStart();
+              } else {
+                void handleStart();
+              }
+            }}
+          >
+            {sessionMode === 'secretary'
+              ? verifying
+                ? '社員情報を照合中…'
+                : '社員照合して音声セッションを起動'
+              : sessionMode === 'voice'
+                ? '音声セッションを起動'
+                : 'テキストセッションを起動'}
           </button>
           <button id="stop" type="button" disabled={!connected && !connecting} onClick={() => void handleStop()}>
             会話終了

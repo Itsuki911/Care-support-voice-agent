@@ -242,3 +242,72 @@ class RAGChunkModel(Base):
     )
 
     document: Mapped["RAGDocumentModel"] = relationship(back_populates="chunks")
+
+
+class SecretaryEmployeeModel(Base):
+    """Fictional employee directory for TEST-Secretary mode verification."""
+
+    __tablename__ = "secretary_employees"
+
+    employee_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    department: Mapped[str] = mapped_column(String(128), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+
+    events: Mapped[list["SecretaryEventModel"]] = relationship(
+        back_populates="employee", cascade="all, delete-orphan"
+    )
+    tasks: Mapped[list["SecretaryTaskModel"]] = relationship(
+        back_populates="employee", cascade="all, delete-orphan"
+    )
+
+
+class SecretaryEventModel(Base):
+    """Scheduled meetings and work blocks for TEST-Secretary mode."""
+
+    __tablename__ = "secretary_events"
+    __table_args__ = (
+        Index("ix_secretary_events_emp_start", "employee_id", "start_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    seed_key: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
+    employee_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("secretary_employees.employee_id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    event_type: Mapped[str] = mapped_column(String(32), nullable=False)  # "meeting" | "work"
+    start_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    end_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    location: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+
+    employee: Mapped["SecretaryEmployeeModel"] = relationship(back_populates="events")
+
+
+class SecretaryTaskModel(Base):
+    """Tasks with deadlines for TEST-Secretary mode."""
+
+    __tablename__ = "secretary_tasks"
+    __table_args__ = (
+        Index("ix_secretary_tasks_emp_due", "employee_id", "due_at"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    seed_key: Mapped[str | None] = mapped_column(String(128), unique=True, nullable=True)
+    employee_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("secretary_employees.employee_id", ondelete="CASCADE"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(256), nullable=False)
+    due_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(String(32), nullable=False, default="pending")  # "pending" | "completed"
+    priority: Mapped[str] = mapped_column(String(32), nullable=False, default="medium")
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow, server_default=func.now()
+    )
+
+    employee: Mapped["SecretaryEmployeeModel"] = relationship(back_populates="tasks")

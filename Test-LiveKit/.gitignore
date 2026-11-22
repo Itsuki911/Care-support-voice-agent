@@ -10,3 +10,6 @@ recordings/
 .secrets/
 credentials.json
 token.json
+
+# Local TEST-Secretary transcripts (contains local conversation text)
+evaluations/transcripts/
