@@ -17,8 +17,9 @@ from dotenv import load_dotenv
 from secretary.seed import build_seed_dataset
 
 BASE_DIR = Path(__file__).resolve().parent.parent
+REPO_ROOT = BASE_DIR.parent
 DEFAULT_CASES_PATH = Path(__file__).resolve().parent / "secretary_cases.json"
-DEFAULT_TRANSCRIPTS_DIR = Path(__file__).resolve().parent / "transcripts"
+DEFAULT_TRANSCRIPTS_DIR = REPO_ROOT / "export" / "secretary_transcripts"
 CONVERSATION_EVAL_VERSION = "secretary-conv-eval-v3"
 
 
@@ -99,7 +100,7 @@ def evaluate_transcript(
     case: dict[str, Any],
     transcript_doc: dict[str, Any],
     judge_model: Any,
-    threshold: float = 0.7,
+    threshold: float = 0.85,
 ) -> list[MetricResult]:
     from deepeval.metrics import ConversationalGEval, GEval
     from deepeval.test_case import (
@@ -225,7 +226,7 @@ def evaluate_full_conversation(
     transcript_doc: dict[str, Any],
     judge_model: Any,
     employee_id: str | None = None,
-    threshold: float = 0.7,
+    threshold: float = 0.85,
 ) -> list[MetricResult]:
     """Evaluate an entire multi-turn conversation across 4 ConversationalGEval dimensions."""
     from deepeval.metrics import ConversationalGEval
@@ -241,14 +242,15 @@ def evaluate_full_conversation(
         raise ValueError("会話全体の評価には最低2発話（ユーザー＋AI）が必要です。")
 
     context = _build_employee_ground_truth_context(employee_id)
-    eval_params = [MultiTurnParams.ROLE, MultiTurnParams.CONTENT]
+    scenario_text = "社員が音声秘書AIに自分の会議・作業予定・タスクを複数ターンで問い合わせる対話"
     if context:
-        eval_params.append(MultiTurnParams.CONTEXT)
+        scenario_text = f"{scenario_text}\n\n[参照データ]\n{context[0]}"
+    eval_params = [MultiTurnParams.ROLE, MultiTurnParams.CONTENT, MultiTurnParams.SCENARIO]
 
     conv_case = ConversationalTestCase(
         turns=conv_turns,
         context=context,
-        scenario="社員が音声秘書AIに自分の会議・作業予定・タスクを複数ターンで問い合わせる対話",
+        scenario=scenario_text,
     )
 
     metric_specs = [

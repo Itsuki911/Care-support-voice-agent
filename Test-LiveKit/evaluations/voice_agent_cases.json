@@ -1,0 +1,79 @@
+{
+  "schema_version": "voice-agent-evaluation-v1",
+  "dataset_version": "example-v1",
+  "scenarios": [
+    {
+      "scenario_id": "VOICE-01-normal-japanese-tool",
+      "tags": ["normal", "numbers", "tool"],
+      "architecture": "stt-llm-tts",
+      "stt_samples": [
+        {
+          "reference_transcript": "11月25日15時に佐藤花子さんへ電話して",
+          "recognized_transcript": "11月25日15時に佐藤花子さんへ電話して",
+          "reference_tokens": ["11月25日", "15時", "佐藤花子", "さん", "へ", "電話", "して"],
+          "recognized_tokens": ["11月25日", "15時", "佐藤花子", "さん", "へ", "電話", "して"],
+          "expected_entities": [
+            {"type": "date", "value": "11月25日", "critical": true},
+            {"type": "time", "value": "15時", "critical": true},
+            {"type": "person", "value": "佐藤花子", "critical": true}
+          ],
+          "recognized_entities": [
+            {"type": "date", "value": "11月25日"},
+            {"type": "time", "value": "15時"},
+            {"type": "person", "value": "佐藤花子"}
+          ]
+        }
+      ],
+      "latencies_ms": {
+        "end_to_end": [640],
+        "stt": [210],
+        "end_of_utterance": [120],
+        "llm_ttft": [180],
+        "tts_ttfa": [130],
+        "tool": [95]
+      },
+      "turn_samples": [
+        {
+          "eligible": true,
+          "user_speech_end_ms": 1000,
+          "agent_first_audio_ms": 1640,
+          "response_deadline_ms": 2500
+        }
+      ],
+      "task": {"eligible": true, "completed": true},
+      "tools": {
+        "expected": [{"name": "create_callback", "arguments": {"at": "2026-11-25T15:00:00+09:00", "person": "佐藤花子"}}],
+        "actual": [{"name": "create_callback", "arguments": {"at": "2026-11-25T15:00:00+09:00", "person": "佐藤花子"}, "status": "success", "approval_required": true, "approval_obtained": true}],
+        "allowed": ["create_callback"],
+        "denied": ["send_email"]
+      },
+      "tts_samples": [
+        {
+          "reference_transcript": "11月25日15時に佐藤花子さんへお電話します。",
+          "recognized_transcript": "11月25日15時に佐藤花子さんへお電話します。"
+        }
+      ],
+      "reliability": {"session_success": true, "error": false, "timeout": false},
+      "usage": {"cost_usd": 0.012}
+    },
+    {
+      "scenario_id": "VOICE-02-barge-in-correction",
+      "tags": ["barge-in", "correction"],
+      "architecture": "speech-to-speech",
+      "turn_samples": [
+        {
+          "eligible": true,
+          "expected_barge_in": true,
+          "user_speech_end_ms": 2000,
+          "agent_first_audio_ms": 1600,
+          "interruption_detected_ms": 1650,
+          "agent_stopped_ms": 1770,
+          "recovered_to_latest_request": true,
+          "response_deadline_ms": 3000
+        }
+      ],
+      "task": {"eligible": true, "completed": true},
+      "reliability": {"session_success": true, "error": false, "timeout": false}
+    }
+  ]
+}

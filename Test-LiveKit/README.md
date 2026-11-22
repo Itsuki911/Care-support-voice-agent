@@ -55,6 +55,10 @@ LANGFUSE_TRACING_ENABLED=false
 
 詳細は [LiveKit OpenTelemetry traces](https://docs.livekit.io/testing/observability/tracing/) と [Langfuse SDK configuration](https://langfuse.com/docs/observability/sdk/overview) を参照してください。
 
+## 音声エージェント評価
+
+STT 精度、遅延、ターン制御、タスク／ツール安全性、TTS 明瞭性を同じ JSON スキーマで評価できます。ネットワーク不要の評価例と指標のデータ要件は [VOICE_AGENT_EVALUATION.md](VOICE_AGENT_EVALUATION.md) を参照してください。
+
 ## 3. ターミナルで試す
 
 テキストだけで対話する場合:

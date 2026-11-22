@@ -647,7 +647,11 @@ async def entrypoint(ctx: JobContext) -> None:
                 if secretary_db is not None:
                     if confirmed_secretary_turns:
                         try:
-                            transcript_dir = Path(__file__).resolve().parent / "evaluations" / "transcripts"
+                            transcript_dir = (
+                                Path(__file__).resolve().parent.parent
+                                / "export"
+                                / "secretary_transcripts"
+                            )
                             transcript_dir.mkdir(parents=True, exist_ok=True)
                             transcript_doc = {
                                 "session_id": session_id,
