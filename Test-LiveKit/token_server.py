@@ -2,12 +2,19 @@
 
 from __future__ import annotations
 
+import asyncio
 import json
+import logging
 import os
 import re
+import sys
 from datetime import timedelta
 from pathlib import Path
 from uuid import uuid4
+
+if sys.platform == "win32":
+    # psycopg 3 async requires SelectorEventLoop on Windows instead of ProactorEventLoop.
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -19,6 +26,7 @@ from secretary.repository import SecretaryRepository
 
 
 load_dotenv(Path(__file__).with_name(".env"), override=False)
+logger = logging.getLogger("care-support-voice-agent.token_server")
 app = FastAPI(docs_url=None, redoc_url=None, openapi_url=None)
 
 # Vite proxies the request without rewriting its browser Origin header.
@@ -58,6 +66,7 @@ async def verify_secretary_employee(request: Request, response: Response) -> dic
         repo = get_secretary_repository()
         employee = await repo.verify_employee(employee_id=employee_id, name=employee_name)
     except Exception:
+        logger.exception("Secretary employee verification failed")
         raise HTTPException(
             status_code=503, detail="社員データベースに接続できませんでした。"
         ) from None

@@ -102,6 +102,7 @@ def evaluate_transcript(
     from deepeval.test_case import (
         ConversationalTestCase,
         LLMTestCase,
+        MultiTurnParams,
         SingleTurnParams,
         Turn,
     )
@@ -149,6 +150,7 @@ def evaluate_transcript(
     if case.get("has_correction"):
         conv_geval = ConversationalGEval(
             name="CorrectionFollowup",
+            evaluation_params=[MultiTurnParams.ROLE, MultiTurnParams.CONTENT],
             evaluation_steps=[
                 "会話中のユーザー発話を確認し、途中の言い直し・訂正がある場合は最後の依頼を特定する。",
                 "AIの最終回答が訂正前の古い依頼（例: 明日の予定）ではなく、訂正後の最後の依頼（例: 今日の締切）に沿って答えているか判定する。",

@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import asyncio
+import re
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+import psycopg
 from sqlalchemy import select
 
 from database.connection import DatabaseManager
@@ -51,24 +54,39 @@ class SecretaryRepository:
     def __init__(self, db: DatabaseManager) -> None:
         self._db = db
 
-    async def verify_employee(self, *, employee_id: str, name: str) -> VerifiedEmployee | None:
+    @staticmethod
+    def _sync_dsn(database_url: str) -> str:
+        if database_url.startswith("postgresql+psycopg://"):
+            return "postgresql://" + database_url[len("postgresql+psycopg://") :]
+        return database_url
+
+    def _verify_employee_sync(self, *, employee_id: str, name: str) -> VerifiedEmployee | None:
         cleaned_id = employee_id.strip()
-        cleaned_name = name.strip()
+        cleaned_name = re.sub(r"[\s\u3000]+", " ", name.strip())
         if not cleaned_id or not cleaned_name:
             return None
-        async with self._db.session() as session:
-            stmt = select(SecretaryEmployeeModel).where(
-                SecretaryEmployeeModel.employee_id == cleaned_id,
-                SecretaryEmployeeModel.name == cleaned_name,
-            )
-            row = (await session.execute(stmt)).scalar_one_or_none()
-            if row is None:
-                return None
-            return VerifiedEmployee(
-                employee_id=row.employee_id,
-                name=row.name,
-                department=row.department,
-            )
+        dsn = self._sync_dsn(self._db.database_url)
+        with psycopg.connect(dsn, connect_timeout=5) as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT employee_id, name, department FROM secretary_employees "
+                    "WHERE employee_id = %s AND name = %s",
+                    (cleaned_id, cleaned_name),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    return None
+                return VerifiedEmployee(
+                    employee_id=str(row[0]),
+                    name=str(row[1]),
+                    department=str(row[2] or ""),
+                )
+
+    async def verify_employee(self, *, employee_id: str, name: str) -> VerifiedEmployee | None:
+        # Use sync psycopg in a worker thread so uvicorn's ProactorEventLoop on Windows never fails.
+        return await asyncio.to_thread(
+            self._verify_employee_sync, employee_id=employee_id, name=name
+        )
 
     async def get_events_for_date(
         self,
