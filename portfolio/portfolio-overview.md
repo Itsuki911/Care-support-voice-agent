@@ -121,7 +121,9 @@
   - ツールは `get_schedule` / `get_tasks`（JST基準・本人限定・0件とDBエラーを区別）に限定し、専用プロンプト（`prompts/secretary_v1.txt`）で動作。
 - **DeepEval + Langfuse 手動評価 CLI（`evaluations/evaluate_secretary.py` / `evaluations/secretary_cases.json`）**:
   - 通話の確定発話をローカル（`evaluations/transcripts/`、Git 除外）へ順序保持で保存し、`LANGFUSE_ALLOW_PII=false` を維持。
-  - 2指標（`GEval` 最終回答正確性、`ConversationalGEval` 途中訂正追従※訂正なしケースは対象外）で採点し、Langfuse 対象トレースへ PII を含まない判定スコアとメタデータ（`case_id`, `eval_config_version`, `judge_model_id`）を登録。
+  - **固定ケース評価（`--mode case`）**: 2指標（`GEval` 最終回答正確性、`ConversationalGEval` 途中訂正追従※訂正なしケースは対象外）で採点。
+  - **会話全体評価（`--mode conversation`）**: 質問を固定せず複数ターンの自由な会話全体を `ConversationalGEval` の6指標（`TaskCompletion` / `ContextRetention` / `VoiceUX` / `SafetyBoundary` / `TurnTakingAndFillers`＝つなぎ言葉・途中区切り割り込み検証 / `LanguageAdaptation`＝ユーザー言語に合わせた言語切り替え検証）で採点（`--employee-id` 指定時はシードの予定・タスクを事実照合用 `context` として自動付与）。
+  - Langfuse 対象トレースへ PII を含まない判定スコアとメタデータ（`case_id`, `eval_config_version`, `judge_model_id`）を登録。
 
 #### TEST-秘書モード 再現コマンド
 ```powershell
@@ -134,8 +136,9 @@ uv --directory Test-LiveKit run agent.py dev
 uv --directory Test-LiveKit run uvicorn token_server:app --host 127.0.0.1 --port 8000
 npm --prefix fronted-test run dev
 
-# 3. DeepEval 手動採点 & Langfuse スコア登録
+# 3. DeepEval 手動採点（固定ケース / 会話全体） & Langfuse スコア登録
 uv --directory Test-LiveKit run python -m evaluations.evaluate_secretary --case-id SEC-03 --session-id <SESSION_ID>
+uv --directory Test-LiveKit run python -m evaluations.evaluate_secretary --mode conversation --employee-id EMP-1001 --session-id <SESSION_ID>
 ```
 
 ---

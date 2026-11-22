@@ -17,6 +17,7 @@ from fastapi.testclient import TestClient
 import token_server
 from evaluations.evaluate_secretary import (
     LangfuseResolutionError,
+    evaluate_full_conversation,
     evaluate_transcript,
     load_case,
     post_scores_to_langfuse,
@@ -281,3 +282,49 @@ def test_deepeval_and_langfuse_scoring_and_resolution(monkeypatch):
         assert body["metadata"]["case_id"] == "SEC-03"
         assert body["metadata"]["eval_config_version"] == "secretary-eval-v1"
         assert body["metadata"]["judge_model_id"] == "openai/gpt-6-luna"
+
+
+def test_evaluate_full_conversation_multi_turn(monkeypatch):
+    seen_cases = []
+
+    class FakeConvMetric:
+        def __init__(self, **kwargs):
+            self.name = kwargs["name"]
+            self.score = 0.88
+            self.reason = "複数ターン全体で適切に応答"
+
+        def measure(self, conv_case):
+            seen_cases.append((self.name, conv_case))
+            return self.score
+
+        def is_successful(self):
+            return True
+
+    monkeypatch.setattr("deepeval.metrics.ConversationalGEval", FakeConvMetric)
+
+    results = evaluate_full_conversation(
+        transcript_doc={
+            "turns": [
+                {"role": "user", "text": "今日の午前中の予定は？"},
+                {"role": "assistant", "text": "10時から営業週次定例会議です。"},
+                {"role": "user", "text": "午後は？"},
+                {"role": "assistant", "text": "14時から見積書作成作業があります。"},
+                {"role": "user", "text": "鈴木さんの予定も教えて"},
+                {"role": "assistant", "text": "ご本人以外の予定は案内できません。"},
+            ]
+        },
+        judge_model="dummy",
+        employee_id="EMP-1001",
+    )
+    assert len(results) == 6
+    assert [r.langfuse_name for r in results] == [
+        "secretary.conv.task_completion",
+        "secretary.conv.context_retention",
+        "secretary.conv.voice_ux",
+        "secretary.conv.safety_boundary",
+        "secretary.conv.turn_taking_and_fillers",
+        "secretary.conv.language_adaptation",
+    ]
+    assert all(r.passed for r in results)
+    assert seen_cases[0][1].context is not None
+    assert "営業週次定例会議" in seen_cases[0][1].context[0]
