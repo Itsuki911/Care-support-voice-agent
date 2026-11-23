@@ -1,0 +1,77 @@
+{
+  "schema_version": "voice-agent-evaluation-v1",
+  "dataset_version": "session-2026-11-23-1231",
+  "scenarios": [
+    {
+      "scenario_id": "frontend-test-text-ef1895f5db924484bb58e343e1f96ac7-1e309c4b519a40c7ba09602ffc68f27f",
+      "tags": [
+        "text",
+        "live-session"
+      ],
+      "architecture": "text-llm",
+      "latencies_ms": {
+        "llm_ttft": [
+          2364.0,
+          2770.0,
+          3889.0,
+          2061.0,
+          1916.0,
+          847.0,
+          1976.0,
+          1022.0,
+          2826.0,
+          1198.0
+        ],
+        "tool": [
+          3846.0,
+          1108.0,
+          34.0
+        ]
+      },
+      "tools": {
+        "actual": [
+          {
+            "name": "search_web",
+            "arguments": {},
+            "status": "success",
+            "approval_required": true,
+            "approval_obtained": true
+          },
+          {
+            "name": "search_emails",
+            "arguments": {},
+            "status": "error",
+            "approval_required": true,
+            "approval_obtained": true
+          },
+          {
+            "name": "list_recent_memories",
+            "arguments": {},
+            "status": "success",
+            "approval_required": false,
+            "approval_obtained": true
+          }
+        ],
+        "allowed": [
+          "list_recent_memories",
+          "search_memories",
+          "search_emails",
+          "read_email",
+          "send_email",
+          "search_web",
+          "search_documents"
+        ],
+        "denied": []
+      },
+      "conversation": {
+        "input": "warp up the macbook information by using search tool",
+        "actual_output": "Here’s a quick roundup based on the web results: **MacBook Air** comes in 13- and 15-inch sizes with the M5 chip; one report lists starting prices of **$1,099** and **$1,299**, respectively, with 512GB base storage ([CNBC](https://www.cnbc.com/amp/2026/03/03/apple-macbook-prices-m5-ai.html)). **MacBook Pro** models are listed with M5, M5 Pro, and M5 Max chips, but reports disagree on some starting prices, so verify pricing with Apple before buying ([Yahoo Finance](https://finance.yahoo.com/news/apple-launches-new-macbook-air-and-macbook-pro-with-new-m5-chips-153026231.html))."
+      },
+      "reliability": {
+        "session_success": true,
+        "error": true,
+        "timeout": false
+      }
+    }
+  ]
+}

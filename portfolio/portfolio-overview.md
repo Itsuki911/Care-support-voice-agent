@@ -119,6 +119,9 @@
   - `secretary_employees`、`secretary_events`（会議・作業予定）、`secretary_tasks`（期限付きタスク）を Alembic で管理。
   - `secretary/seed.py` により架空社員2名（`EMP-1001` 佐藤 花子 / `EMP-1002` 鈴木 太郎）を冪等に投入可能（同日同時刻の別予定・片方のみの当日締切タスク・0件の日を含む）。
   - ツールは `get_schedule` / `get_tasks`（JST基準・本人限定・0件とDBエラーを区別）に限定し、専用プロンプト（`prompts/secretary_v1.txt`）で動作。
+- **セッション終了後の自動評価・エクスポートパイプライン（`evaluations/post_session_pipeline.py`）**:
+  - `agent.py` のセッション終了処理（`finalize()` の Langfuse flush 完了後）からバックグラウンドの独立プロセスとして自動起動（`AUTO_EVAL_ON_SESSION_END=true` が既定）。
+  - セッション ID を自動取得し、Langfuse トレース到着を待機（リトライ付き）→ `export/` へのセッション JSON 保存 → DeepEval 会話評価＆Langfuse スコア登録 → `export/trace_evals/` へのスコア付きトレース保存 → `export/evaluation_reports/` への評価レポート（JSON / Markdown / `pipeline_summary.json`）生成までを自動実行（手動の `--latest` 実行にも対応）。
 - **DeepEval + Langfuse 手動評価 CLI（`evaluations/evaluate_secretary.py` / `evaluations/evaluate_session.py` / `evaluations/secretary_cases.json`）**:
   - 通話・チャットの確定発話をローカル（秘書モードは `export/secretary_transcripts/`、通常音声・テキストセッションは `export/session_transcripts/`、いずれも Git 除外）へ順序保持で保存し、`LANGFUSE_ALLOW_PII=false` を維持。
   - **固定ケース評価（`--mode case`）**: 2指標（`GEval` 最終回答正確性、`ConversationalGEval` 途中訂正追従※訂正なしケースは対象外）で採点。

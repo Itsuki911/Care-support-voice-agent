@@ -24,6 +24,7 @@ from livekit.agents import Agent, AgentServer, AgentSession, JobContext, cli, in
 from livekit.plugins import openai
 
 from approvals import ApprovalManager, register_approval_rpc
+from evaluations.post_session_pipeline import spawn_post_session_pipeline
 from gmail_tools import GmailTools
 from memory.factory import MemoryRuntime, create_memory_runtime
 from memory.models.memory import ConversationMessage
@@ -644,6 +645,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 await session.aclose()
                 monitor.finish(session, reason)
             finally:
+                saved_transcript_path: Path | None = None
                 if confirmed_turns and not os.getenv("PYTEST_CURRENT_TEST"):
                     try:
                         folder_name = (
@@ -662,12 +664,16 @@ async def entrypoint(ctx: JobContext) -> None:
                             "room_name": room_name,
                             "session_mode": session_mode,
                             "user_id": get_memory_user_id(),
+                            "employee_id": (
+                                _resolve_verified_employee_id()
+                                if is_secretary_session
+                                else None
+                            ),
                             "turns": confirmed_turns,
                         }
                         encoded_doc = json.dumps(transcript_doc, ensure_ascii=False, indent=2)
-                        (transcript_dir / f"{session_id}.json").write_text(
-                            encoded_doc, encoding="utf-8"
-                        )
+                        saved_transcript_path = transcript_dir / f"{session_id}.json"
+                        saved_transcript_path.write_text(encoded_doc, encoding="utf-8")
                         if room_name != session_id:
                             (transcript_dir / f"{room_name}.json").write_text(
                                 encoded_doc, encoding="utf-8"
@@ -692,6 +698,27 @@ async def entrypoint(ctx: JobContext) -> None:
                 if trace_provider is not None:
                     await asyncio.to_thread(flush_traces, trace_provider)
                     await asyncio.to_thread(trace_provider.shutdown)
+                auto_eval_enabled = os.getenv("AUTO_EVAL_ON_SESSION_END", "true").strip().lower() not in {
+                    "0",
+                    "false",
+                    "no",
+                    "off",
+                }
+                has_user_turn = any(t.get("role") == "user" and t.get("text") for t in confirmed_turns)
+                has_asst_turn = any(t.get("role") == "assistant" and t.get("text") for t in confirmed_turns)
+                if (
+                    auto_eval_enabled
+                    and saved_transcript_path is not None
+                    and has_user_turn
+                    and has_asst_turn
+                    and not ctx.is_fake_job()
+                    and not os.getenv("PYTEST_CURRENT_TEST")
+                ):
+                    try:
+                        spawn_post_session_pipeline(session_id, saved_transcript_path)
+                        logger.info("Spawned background post-session evaluation pipeline for %s", session_id)
+                    except Exception:
+                        logger.warning("Failed to spawn post-session evaluation pipeline", exc_info=True)
                 finished = True
 
     @session.on("close")
