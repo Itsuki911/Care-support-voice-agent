@@ -1,5 +1,6 @@
 # Local CodeGraph index
 .codegraph/
 
-# Local TEST-Secretary transcripts (contains local conversation text)
+# Local transcripts (contains local conversation text / PII)
 export/secretary_transcripts/
+export/session_transcripts/

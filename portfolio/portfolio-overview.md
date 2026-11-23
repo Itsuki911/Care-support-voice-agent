@@ -119,13 +119,13 @@
   - `secretary_employees`、`secretary_events`（会議・作業予定）、`secretary_tasks`（期限付きタスク）を Alembic で管理。
   - `secretary/seed.py` により架空社員2名（`EMP-1001` 佐藤 花子 / `EMP-1002` 鈴木 太郎）を冪等に投入可能（同日同時刻の別予定・片方のみの当日締切タスク・0件の日を含む）。
   - ツールは `get_schedule` / `get_tasks`（JST基準・本人限定・0件とDBエラーを区別）に限定し、専用プロンプト（`prompts/secretary_v1.txt`）で動作。
-- **DeepEval + Langfuse 手動評価 CLI（`evaluations/evaluate_secretary.py` / `evaluations/secretary_cases.json`）**:
-  - 通話の確定発話をローカル（`export/secretary_transcripts/`、Git 除外）へ順序保持で保存し、`LANGFUSE_ALLOW_PII=false` を維持。
+- **DeepEval + Langfuse 手動評価 CLI（`evaluations/evaluate_secretary.py` / `evaluations/evaluate_session.py` / `evaluations/secretary_cases.json`）**:
+  - 通話・チャットの確定発話をローカル（秘書モードは `export/secretary_transcripts/`、通常音声・テキストセッションは `export/session_transcripts/`、いずれも Git 除外）へ順序保持で保存し、`LANGFUSE_ALLOW_PII=false` を維持。
   - **固定ケース評価（`--mode case`）**: 2指標（`GEval` 最終回答正確性、`ConversationalGEval` 途中訂正追従※訂正なしケースは対象外）で採点。
-  - **会話全体評価（`--mode conversation`）**: 質問を固定せず複数ターンの自由な会話全体を `ConversationalGEval` の6指標（`TaskCompletion` / `ContextRetention` / `VoiceUX` / `SafetyBoundary` / `TurnTakingAndFillers`＝つなぎ言葉・途中区切り割り込み検証 / `LanguageAdaptation`＝ユーザー言語に合わせた言語切り替え検証）で採点（`--employee-id` 指定時はシードの予定・タスクを事実照合用 `context` として自動付与）。
+  - **会話全体評価（`--mode conversation` / `evaluate_session.py`）**: 秘書モードに加え、**通常の音声セッション（`voice.conv.*`）・テキストセッション（`text.conv.*`）** にも対応（セッション種別を自動判定）。`ConversationalGEval` の6指標（`TaskCompletion` / `ContextRetention` / `VoiceUX` または `TextUX` / `SafetyBoundary` / `TurnTakingAndFillers`※テキストセッションは既定 SKIPPED / `LanguageAdaptation`）で採点（秘書モードで `--employee-id` 指定時はシードの予定・タスクを事実照合用 `context` として自動付与）。
   - Langfuse 対象トレースへ PII を含まない判定スコアとメタデータ（`case_id`, `eval_config_version`, `judge_model_id`）を登録。
 
-#### TEST-秘書モード 再現コマンド
+#### TEST-秘書モード / 通常セッション 再現・評価コマンド
 ```powershell
 # 1. DB マイグレーション & 冪等シード投入
 uv --directory Test-LiveKit run alembic upgrade head
@@ -136,7 +136,10 @@ uv --directory Test-LiveKit run agent.py dev
 uv --directory Test-LiveKit run uvicorn token_server:app --host 127.0.0.1 --port 8000
 npm --prefix fronted-test run dev
 
-# 3. DeepEval 手動採点（固定ケース / 会話全体） & Langfuse スコア登録
+# 3. DeepEval 手動採点 & Langfuse スコア登録
+# 3a. 通常の音声セッション / テキストセッション（種別自動判定）
+uv --directory Test-LiveKit run python -m evaluations.evaluate_session --session-id <SESSION_ID>
+# 3b. TEST-秘書モード（固定ケース / 会話全体）
 uv --directory Test-LiveKit run python -m evaluations.evaluate_secretary --case-id SEC-03 --session-id <SESSION_ID>
 uv --directory Test-LiveKit run python -m evaluations.evaluate_secretary --mode conversation --employee-id EMP-1001 --session-id <SESSION_ID>
 ```

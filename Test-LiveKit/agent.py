@@ -293,7 +293,27 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception:
             logger.warning("Failed to initialize secretary DatabaseManager", exc_info=True)
     recorded_messages: list[ConversationMessage] = []
-    confirmed_secretary_turns: list[dict[str, Any]] = []
+    confirmed_turns: list[dict[str, Any]] = []
+
+    def _record_confirmed_turn(payload: dict[str, Any]) -> None:
+        if payload.get("status") not in ("final", "interrupted"):
+            return
+        entry = {
+            "seq": payload.get("seq"),
+            "turn_id": payload.get("turn_id"),
+            "utterance_id": payload.get("utterance_id"),
+            "role": payload.get("speaker"),
+            "text": payload.get("text", ""),
+            "status": payload.get("status"),
+            "timestamp": payload.get("timestamp"),
+        }
+        utt_id = entry.get("utterance_id")
+        if utt_id:
+            for idx, existing in enumerate(confirmed_turns):
+                if existing.get("utterance_id") == utt_id:
+                    confirmed_turns[idx] = entry
+                    return
+        confirmed_turns.append(entry)
     memory_committed = False
 
     def get_memory_user_id() -> str:
@@ -574,17 +594,7 @@ async def entrypoint(ctx: JobContext) -> None:
             timestamp=getattr(event, "created_at", None),
         )
         if payload is not None:
-            if is_secretary_session and payload.get("status") in ("final", "interrupted"):
-                confirmed_secretary_turns.append(
-                    {
-                        "seq": payload.get("seq"),
-                        "turn_id": payload.get("turn_id"),
-                        "role": payload.get("speaker"),
-                        "text": payload.get("text", ""),
-                        "status": payload.get("status"),
-                        "timestamp": payload.get("timestamp"),
-                    }
-                )
+            _record_confirmed_turn(payload)
             asyncio.create_task(publish_json_data(payload))
 
     def handle_conversation_item(event: object) -> None:
@@ -613,17 +623,7 @@ async def entrypoint(ctx: JobContext) -> None:
             timestamp=getattr(event, "created_at", None),
         )
         if payload is not None:
-            if is_secretary_session and payload.get("status") in ("final", "interrupted"):
-                confirmed_secretary_turns.append(
-                    {
-                        "seq": payload.get("seq"),
-                        "turn_id": payload.get("turn_id"),
-                        "role": payload.get("speaker"),
-                        "text": payload.get("text", ""),
-                        "status": payload.get("status"),
-                        "timestamp": payload.get("timestamp"),
-                    }
-                )
+            _record_confirmed_turn(payload)
             asyncio.create_task(publish_json_data(payload))
 
     monitor.bind(session, on_conversation_item=handle_conversation_item)
@@ -644,30 +644,37 @@ async def entrypoint(ctx: JobContext) -> None:
                 await session.aclose()
                 monitor.finish(session, reason)
             finally:
-                if secretary_db is not None:
-                    if confirmed_secretary_turns:
-                        try:
-                            transcript_dir = (
-                                Path(__file__).resolve().parent.parent
-                                / "export"
-                                / "secretary_transcripts"
-                            )
-                            transcript_dir.mkdir(parents=True, exist_ok=True)
-                            transcript_doc = {
-                                "session_id": session_id,
-                                "room_name": room_name,
-                                "turns": confirmed_secretary_turns,
-                            }
-                            encoded_doc = json.dumps(transcript_doc, ensure_ascii=False, indent=2)
-                            (transcript_dir / f"{session_id}.json").write_text(
+                if confirmed_turns and not os.getenv("PYTEST_CURRENT_TEST"):
+                    try:
+                        folder_name = (
+                            "secretary_transcripts"
+                            if is_secretary_session
+                            else "session_transcripts"
+                        )
+                        transcript_dir = (
+                            Path(__file__).resolve().parent.parent
+                            / "export"
+                            / folder_name
+                        )
+                        transcript_dir.mkdir(parents=True, exist_ok=True)
+                        transcript_doc = {
+                            "session_id": session_id,
+                            "room_name": room_name,
+                            "session_mode": session_mode,
+                            "user_id": get_memory_user_id(),
+                            "turns": confirmed_turns,
+                        }
+                        encoded_doc = json.dumps(transcript_doc, ensure_ascii=False, indent=2)
+                        (transcript_dir / f"{session_id}.json").write_text(
+                            encoded_doc, encoding="utf-8"
+                        )
+                        if room_name != session_id:
+                            (transcript_dir / f"{room_name}.json").write_text(
                                 encoded_doc, encoding="utf-8"
                             )
-                            if room_name != session_id:
-                                (transcript_dir / f"{room_name}.json").write_text(
-                                    encoded_doc, encoding="utf-8"
-                                )
-                        except Exception:
-                            logger.warning("Failed to save local secretary transcript", exc_info=True)
+                    except Exception:
+                        logger.warning("Failed to save local session transcript", exc_info=True)
+                if secretary_db is not None:
                     try:
                         await secretary_db.close()
                     except Exception:

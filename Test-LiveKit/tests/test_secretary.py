@@ -328,3 +328,85 @@ def test_evaluate_full_conversation_multi_turn(monkeypatch):
     assert all(r.passed for r in results)
     assert seen_cases[0][1].context is not None
     assert "営業週次定例会議" in seen_cases[0][1].context[0]
+
+
+def test_evaluate_full_conversation_supports_voice_and_text_sessions(monkeypatch, tmp_path):
+    from evaluations.evaluate_secretary import detect_session_type, load_local_transcript
+
+    class FakeConvMetric:
+        def __init__(self, **kwargs):
+            self.name = kwargs["name"]
+            self.score = 0.90
+            self.reason = "適切に応答"
+
+        def measure(self, _):
+            return self.score
+
+        def is_successful(self):
+            return True
+
+    monkeypatch.setattr("deepeval.metrics.ConversationalGEval", FakeConvMetric)
+
+    sample_turns = [
+        {"role": "user", "text": "勤務開始時刻は何時ですか？"},
+        {"role": "assistant", "text": "標準勤務の始業時刻は午前9時00分です。"},
+        {"role": "user", "text": "In English please."},
+        {"role": "assistant", "text": "Standard working hours start at 9:00 AM."},
+    ]
+
+    # Voice session: all 6 metrics active with voice.conv.* names
+    voice_results = evaluate_full_conversation(
+        transcript_doc={"session_mode": "voice", "turns": sample_turns},
+        judge_model="dummy",
+        session_type="voice",
+    )
+    assert [r.langfuse_name for r in voice_results] == [
+        "voice.conv.task_completion",
+        "voice.conv.context_retention",
+        "voice.conv.voice_ux",
+        "voice.conv.safety_boundary",
+        "voice.conv.turn_taking_and_fillers",
+        "voice.conv.language_adaptation",
+    ]
+    assert all(not r.skipped and r.passed for r in voice_results)
+
+    # Text session: TurnTakingAndFillers skipped by default, TextUX used
+    text_results = evaluate_full_conversation(
+        transcript_doc={"session_mode": "text", "turns": sample_turns},
+        judge_model="dummy",
+        session_type="text",
+    )
+    assert [r.langfuse_name for r in text_results] == [
+        "text.conv.task_completion",
+        "text.conv.context_retention",
+        "text.conv.text_ux",
+        "text.conv.safety_boundary",
+        "text.conv.turn_taking_and_fillers",
+        "text.conv.language_adaptation",
+    ]
+    skipped = [r for r in text_results if r.skipped]
+    assert len(skipped) == 1
+    assert skipped[0].langfuse_name == "text.conv.turn_taking_and_fillers"
+
+    # Auto-detection from session_mode and room/session_id prefixes
+    assert detect_session_type("frontend-test-text-abc") == "text"
+    assert detect_session_type("frontend-test-abc") == "voice"
+    assert detect_session_type("frontend-test-secretary-abc") == "secretary"
+    assert detect_session_type("custom-room", {"session_mode": "voice"}) == "voice"
+
+    # load_local_transcript resolves from session_transcripts fallback directory
+    sec_dir = tmp_path / "secretary_transcripts"
+    sess_dir = tmp_path / "session_transcripts"
+    sec_dir.mkdir()
+    sess_dir.mkdir()
+    (sess_dir / "frontend-test-voice123.json").write_text(
+        json.dumps({"session_mode": "voice", "turns": sample_turns}, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    loaded = load_local_transcript(
+        "frontend-test-voice123",
+        transcripts_dir=sec_dir,
+        session_transcripts_dir=sess_dir,
+    )
+    assert loaded["session_mode"] == "voice"
+    assert len(loaded["turns"]) == 4
