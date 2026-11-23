@@ -168,6 +168,8 @@ class OpenRouterMemoryLLM:
                 {"role": "user", "content": user_prompt},
             ],
         }
+        if self._model.startswith("anthropic/"):
+            payload["cache_control"] = {"type": "ephemeral"}
         try:
             if self._external_client is not None:
                 resp = await self._external_client.post(

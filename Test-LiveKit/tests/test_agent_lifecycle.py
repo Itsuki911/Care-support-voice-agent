@@ -160,3 +160,17 @@ def test_text_and_voice_sessions_are_strictly_separated(monkeypatch):
         await voice_callbacks[0]()
 
     asyncio.run(scenario())
+
+
+def test_anthropic_model_enables_openrouter_cache_control():
+    from livekit.plugins import openai
+
+    llm_instance = openai.LLM.with_openrouter(
+        model="anthropic/claude-haiku-5.5",
+        api_key="test-key",
+        prompt_cache_key="care-support:v2",
+    )
+    extra_body = llm_instance._opts.extra_body
+    assert isinstance(extra_body, dict)
+    extra_body.setdefault("cache_control", {"type": "ephemeral"})
+    assert llm_instance._opts.extra_body["cache_control"] == {"type": "ephemeral"}

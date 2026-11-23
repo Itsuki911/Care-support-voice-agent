@@ -1,0 +1,68 @@
+{
+  "schema_version": "voice-agent-evaluation-v1",
+  "dataset_version": "auto-20261123-155536",
+  "scenarios": [
+    {
+      "scenario_id": "frontend-test-text-0a1bc1d48a3f41ca9b1ad7e9901a15cf-c4b51c1cabc54f7dae4c3fbd9bd4d0ed",
+      "tags": [
+        "text",
+        "live-session",
+        "auto-eval"
+      ],
+      "architecture": "text-llm",
+      "latencies_ms": {
+        "llm_ttft": [
+          930.0,
+          2021.0,
+          1098.0,
+          1269.0,
+          741.0,
+          1942.0
+        ],
+        "tool": [
+          1820.0,
+          22.0
+        ]
+      },
+      "tools": {
+        "actual": [
+          {
+            "name": "search_web",
+            "arguments": {},
+            "status": "success",
+            "approval_required": true,
+            "approval_obtained": true
+          },
+          {
+            "name": "list_recent_memories",
+            "arguments": {},
+            "status": "success",
+            "approval_required": false,
+            "approval_obtained": true
+          }
+        ],
+        "allowed": [
+          "get_schedule",
+          "get_tasks",
+          "list_recent_memories",
+          "read_email",
+          "search_documents",
+          "search_emails",
+          "search_memories",
+          "search_web",
+          "send_email"
+        ],
+        "denied": []
+      },
+      "conversation": {
+        "input": "can you check the strucrure of water by using web search tool",
+        "actual_output": "Web search confirms water (H₂O) is a bent triatomic molecule: a central oxygen atom bonded to two hydrogens, with an H–O–H bond angle of about 104.5°. The oxygen has two lone pairs, giving it C₂ᵥ symmetry and a roughly tetrahedral arrangement of four electron domains. Sources: Wikipedia \"Chemical bonding of water\" and Gonzaga University CHEM 245 notes.\n\nWant me to look into its O–H bond length or hydrogen-bonding network next?"
+      },
+      "reliability": {
+        "session_success": true,
+        "error": false,
+        "timeout": false
+      }
+    }
+  ]
+}

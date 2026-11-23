@@ -1,0 +1,69 @@
+{
+  "schema_version": "voice-agent-evaluation-v1",
+  "dataset_version": "auto-20261123-154911",
+  "scenarios": [
+    {
+      "scenario_id": "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24",
+      "tags": [
+        "text",
+        "live-session",
+        "auto-eval"
+      ],
+      "architecture": "text-llm",
+      "latencies_ms": {
+        "llm_ttft": [
+          3818.0,
+          2459.0,
+          2808.0,
+          3212.0,
+          4331.0,
+          1716.0,
+          1850.0
+        ],
+        "tool": [
+          2122.0,
+          40.0
+        ]
+      },
+      "tools": {
+        "actual": [
+          {
+            "name": "search_web",
+            "arguments": {},
+            "status": "success",
+            "approval_required": true,
+            "approval_obtained": true
+          },
+          {
+            "name": "list_recent_memories",
+            "arguments": {},
+            "status": "success",
+            "approval_required": false,
+            "approval_obtained": true
+          }
+        ],
+        "allowed": [
+          "get_schedule",
+          "get_tasks",
+          "list_recent_memories",
+          "read_email",
+          "search_documents",
+          "search_emails",
+          "search_memories",
+          "search_web",
+          "send_email"
+        ],
+        "denied": []
+      },
+      "conversation": {
+        "input": "私の今日の10時ではなく、12時の予定はわかる？",
+        "actual_output": "あいにく、私はカレンダーにアクセスできないので、今日の12時の予定を直接確認できません。\n\nよろしければGmailの受信トレイを検索して、12時の会議・予定の招待がないか調べましょうか？"
+      },
+      "reliability": {
+        "session_success": true,
+        "error": false,
+        "timeout": false
+      }
+    }
+  ]
+}

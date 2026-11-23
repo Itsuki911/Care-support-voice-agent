@@ -1,0 +1,1185 @@
+{
+  "schema_version": "voice-agent-evaluation-v1",
+  "dataset_version": "auto-20261123-154911",
+  "scenario_count": 1,
+  "judge_enabled": false,
+  "metrics": [
+    {
+      "metric": "stt.cer.micro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.05,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "STT; NFKC + whitespace-only normalization, character-level Levenshtein.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "normalization": "NFKC + remove whitespace"
+      }
+    },
+    {
+      "metric": "stt.cer.macro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.05,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Mean per-utterance CER; prevents long utterances from dominating.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "stt.wer.micro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.1,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Requires supplied, fixed token arrays; Japanese text is never tokenized implicitly.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "tokenizer": "dataset-supplied tokens"
+      }
+    },
+    {
+      "metric": "stt.wer.macro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.1,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Mean per-utterance WER; N/A without dataset-supplied token arrays.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "stt.entity.f1",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No expected/recognized entity annotations.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "latency.end_to_end.mean",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_to_end.p50",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_to_end.p95",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 1000.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_to_end.p99",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_to_end.max",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.stt.mean",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.stt.p50",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.stt.p95",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 350.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.stt.p99",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.stt.max",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_of_utterance.mean",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_of_utterance.p50",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_of_utterance.p95",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 300.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_of_utterance.p99",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.end_of_utterance.max",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.llm_ttft.mean",
+      "raw_value": 2884.8571428571427,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 7,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.llm_ttft.p50",
+      "raw_value": 2808.0,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 7,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.llm_ttft.p95",
+      "raw_value": 4177.099999999999,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 600.0,
+      "status": "FAIL",
+      "sample_count": 7,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.llm_ttft.p99",
+      "raw_value": 4300.219999999999,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 7,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.llm_ttft.max",
+      "raw_value": 4331.0,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 7,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfa.mean",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfa.p50",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfa.p95",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 300.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfa.p99",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfa.max",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfb.mean",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfb.p50",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfb.p95",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 300.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfb.p99",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tts_ttfb.max",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tool.mean",
+      "raw_value": 1081.0,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tool.p50",
+      "raw_value": 1081.0,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tool.p95",
+      "raw_value": 2017.8999999999999,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 500.0,
+      "status": "FAIL",
+      "sample_count": 2,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tool.p99",
+      "raw_value": 2101.18,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.tool.max",
+      "raw_value": 2122.0,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.network.mean",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.network.p50",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.network.p95",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 200.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.network.p99",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "latency.network.max",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded monotonic-clock duration; component is N/A when not emitted by the provider.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "percentile": "linear interpolation"
+      }
+    },
+    {
+      "metric": "turn.early_response_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Agent audio begins before the annotated user end, excluding expected barge-ins.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "turn.false_end_of_turn_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Requires explicit false_end_of_turn annotation.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "turn.false_interruption_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Requires explicit false_interruption annotation.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "turn.unwanted_overlap_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Timestamped overlap not marked expected.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "barge_in.detection_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Interruption event was detected.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "barge_in.stop_latency.p95",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ms",
+      "threshold": 250.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Interruption detection to agent audio stop.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "barge_in.recovery_success_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Annotated processing of the latest interrupted request.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "silence.no_response_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No first agent audio timestamp for a deadline-bound turn.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "silence.long_silence_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "First agent audio exceeds scenario response deadline.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "silence.timeout_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "First agent audio is after scenario response deadline.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "task.completion_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Uses explicitly asserted expected final state; no textual inference.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "required": "task.eligible and task.completed"
+      }
+    },
+    {
+      "metric": "reliability.session_success_rate",
+      "raw_value": 1.0,
+      "normalized_score": 1.0,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "PASS",
+      "sample_count": 1,
+      "reason": "Recorded session terminal status.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "reliability.error_rate",
+      "raw_value": 0.0,
+      "normalized_score": 1.0,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "PASS",
+      "sample_count": 1,
+      "reason": "Recorded error flags.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "reliability.timeout_rate",
+      "raw_value": 0.0,
+      "normalized_score": 1.0,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "PASS",
+      "sample_count": 1,
+      "reason": "Recorded timeout flags.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "reliability.recovery_success_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Recorded recovery attempts and terminal results.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "cost.per_session_usd",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "USD",
+      "threshold": 0.05,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Measured cost supplied by provider; no price estimation is performed here.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "cost.per_successful_task_usd",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "USD",
+      "threshold": 0.02,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Total supplied session cost divided by completed eligible tasks.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "tool.selection.f1",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No expected tool annotations supplied (unannotated live conversation).",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "tool.arguments.accuracy",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Exact structured argument match on paired tool names; N/A when no paired calls.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "tool.execution.success_rate",
+      "raw_value": 1.0,
+      "normalized_score": 1.0,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "Uses recorded tool terminal statuses only.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "tool.unnecessary_call_rate",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No expected tool annotations supplied (unannotated live conversation).",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "safety.approval_violation_rate",
+      "raw_value": 0.0,
+      "normalized_score": 1.0,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "Calls marked approval_required without approval_obtained are critical violations.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "safety.false_success_claim_rate",
+      "raw_value": 0.0,
+      "normalized_score": 1.0,
+      "unit": "ratio",
+      "threshold": 0.0,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "Claims success although the recorded tool status is not successful.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.tool_permission",
+      "raw_value": 1.0,
+      "normalized_score": 1.0,
+      "unit": "ratio",
+      "threshold": 1.0,
+      "status": "PASS",
+      "sample_count": 2,
+      "reason": "All 2 tool call(s) stayed within the permitted set.",
+      "evidence": [
+        "frontend-test-text-b5d37bdc20e44ac0bcca91336bdf7b10-30965bd7e477425f859c8c743584ec24"
+      ],
+      "source": "deepeval:ToolPermissionMetric",
+      "configuration": {}
+    },
+    {
+      "metric": "tts.intelligibility.cer.micro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.05,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "independent STT for TTS audio; NFKC + whitespace-only normalization, character-level Levenshtein.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "normalization": "NFKC + remove whitespace"
+      }
+    },
+    {
+      "metric": "tts.intelligibility.cer.macro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.05,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Mean per-utterance CER; prevents long utterances from dominating.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "tts.intelligibility.wer.micro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.1,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Requires supplied, fixed token arrays; Japanese text is never tokenized implicitly.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {
+        "tokenizer": "dataset-supplied tokens"
+      }
+    },
+    {
+      "metric": "tts.intelligibility.wer.macro",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": 0.1,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "Mean per-utterance WER; N/A without dataset-supplied token arrays.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "tts.intelligibility.entity.f1",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No expected/recognized entity annotations.",
+      "evidence": [],
+      "source": "deterministic",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.voice.speech_intelligibility",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No decodable voice_turns[].audio_path was supplied; transcript-only data is not audio evidence.",
+      "evidence": [],
+      "source": "deepeval:SpeechIntelligibilityMetric",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.voice.naturalness",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No decodable voice_turns[].audio_path was supplied; transcript-only data is not audio evidence.",
+      "evidence": [],
+      "source": "deepeval:VoiceNaturalnessMetric",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.voice.consistency",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No decodable voice_turns[].audio_path was supplied; transcript-only data is not audio evidence.",
+      "evidence": [],
+      "source": "deepeval:VoiceConsistencyMetric",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.voice.audio_integrity",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No decodable voice_turns[].audio_path was supplied; transcript-only data is not audio evidence.",
+      "evidence": [],
+      "source": "deepeval:AudioIntegrityMetric",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.voice.turn_taking_naturalness",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No decodable voice_turns[].audio_path was supplied; transcript-only data is not audio evidence.",
+      "evidence": [],
+      "source": "deepeval:TurnTakingNaturalnessMetric",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.voice.agent_responsiveness",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No decodable voice_turns[].audio_path was supplied; transcript-only data is not audio evidence.",
+      "evidence": [],
+      "source": "deepeval:AgentResponsivenessMetric",
+      "configuration": {}
+    },
+    {
+      "metric": "deepeval.voice.audio_glitch",
+      "raw_value": null,
+      "normalized_score": null,
+      "unit": "ratio",
+      "threshold": null,
+      "status": "N/A",
+      "sample_count": 0,
+      "reason": "No decodable voice_turns[].audio_path was supplied; transcript-only data is not audio evidence.",
+      "evidence": [],
+      "source": "deepeval:AudioGlitchMetric",
+      "configuration": {}
+    }
+  ]
+}

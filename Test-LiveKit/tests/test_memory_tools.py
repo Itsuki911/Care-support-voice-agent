@@ -157,6 +157,8 @@ def test_agent_entrypoint_injects_recent_memories_and_commits_only_on_end_sessio
         enqueue_conversation=MagicMock(
             side_effect=lambda uid, sid, msgs: enqueued.append((uid, sid, msgs)) or True
         ),
+        drain=AsyncMock(return_value=None),
+        completed_results=[],
     )
 
     async def fake_close():

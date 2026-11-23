@@ -1,0 +1,45 @@
+{
+  "schema_version": "voice-agent-evaluation-v1",
+  "dataset_version": "auto-20261123-205407",
+  "scenarios": [
+    {
+      "scenario_id": "frontend-test-text-15901d2613be4001a5748f4740a1bf76-59dab046c87d41779f9abe01adab3d40",
+      "tags": [
+        "text",
+        "live-session",
+        "auto-eval"
+      ],
+      "architecture": "text-llm",
+      "latencies_ms": {
+        "llm_ttft": [
+          2210.0,
+          2136.0
+        ]
+      },
+      "tools": {
+        "actual": [],
+        "allowed": [
+          "get_schedule",
+          "get_tasks",
+          "list_recent_memories",
+          "read_email",
+          "search_documents",
+          "search_emails",
+          "search_memories",
+          "search_web",
+          "send_email"
+        ],
+        "denied": []
+      },
+      "conversation": {
+        "input": "heelo",
+        "actual_output": "こんにちは！ 何かお手伝いできることはありますか？ メール確認、文書検索、調べものなど、どうぞお申し付けください。"
+      },
+      "reliability": {
+        "session_success": true,
+        "error": false,
+        "timeout": false
+      }
+    }
+  ]
+}

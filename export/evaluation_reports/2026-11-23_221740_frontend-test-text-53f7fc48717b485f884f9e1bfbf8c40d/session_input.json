@@ -1,0 +1,59 @@
+{
+  "schema_version": "voice-agent-evaluation-v1",
+  "dataset_version": "auto-20261123-221740",
+  "scenarios": [
+    {
+      "scenario_id": "frontend-test-text-53f7fc48717b485f884f9e1bfbf8c40d-885ebb8db98041c893cc1ec5c2612701",
+      "tags": [
+        "text",
+        "live-session",
+        "auto-eval"
+      ],
+      "architecture": "text-llm",
+      "latencies_ms": {
+        "llm_ttft": [
+          1672.0,
+          1637.0,
+          2585.0,
+          2073.0,
+          1224.0
+        ],
+        "tool": [
+          3520.0
+        ]
+      },
+      "tools": {
+        "actual": [
+          {
+            "name": "search_web",
+            "arguments": {},
+            "status": "success",
+            "approval_required": true,
+            "approval_obtained": true
+          }
+        ],
+        "allowed": [
+          "get_schedule",
+          "get_tasks",
+          "list_recent_memories",
+          "read_email",
+          "search_documents",
+          "search_emails",
+          "search_memories",
+          "search_web",
+          "send_email"
+        ],
+        "denied": []
+      },
+      "conversation": {
+        "input": "can  you check the structure of water by using web search tool",
+        "actual_output": "Water (H₂O) has a **bent, V-shaped** structure. The oxygen atom bonds to two hydrogen atoms, and two lone pairs of electrons on oxygen push the hydrogens closer together, giving a bond angle of about **104.5°**. Because of this bent shape, water is a polar molecule.\n\nSources: Mendeleev, ChemicalBook, and geometryofmolecules.com."
+      },
+      "reliability": {
+        "session_success": true,
+        "error": false,
+        "timeout": false
+      }
+    }
+  ]
+}

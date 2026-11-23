@@ -562,7 +562,49 @@ async def entrypoint(ctx: JobContext) -> None:
                 if isinstance(text_value, str) and text_value.strip():
                     asyncio.create_task(handle_user_text_turn(text_value.strip()))
             elif msg_type == "end_session":
-                submit_conversation_to_memory("end_session_button")
+                queued = submit_conversation_to_memory("end_session_button")
+                asyncio.create_task(_await_memory_and_notify(queued))
+
+        async def _await_memory_and_notify(queued: bool) -> None:
+            if not queued or memory_runtime is None:
+                await publish_json_data(
+                    {
+                        "type": "memory_saved",
+                        "session_id": room_name,
+                        "status": "skipped",
+                    }
+                )
+                return
+            try:
+                drain_fn = getattr(memory_runtime.worker, "drain", None)
+                if callable(drain_fn):
+                    await drain_fn(timeout_seconds=22.0)
+                completed = getattr(memory_runtime.worker, "completed_results", None) or []
+                latest = next(
+                    (r for r in reversed(completed) if getattr(r, "session_id", None) == session_id),
+                    None,
+                )
+                errors = list(getattr(latest, "errors", []) or []) if latest is not None else []
+                await publish_json_data(
+                    {
+                        "type": "memory_saved",
+                        "session_id": room_name,
+                        "status": "error" if errors else "saved",
+                        "saved_messages": int(getattr(latest, "saved_messages", 0) or 0) if latest else 0,
+                        "added_count": len(getattr(latest, "added_ids", []) or []) if latest else 0,
+                        "updated_count": len(getattr(latest, "updated_ids", []) or []) if latest else 0,
+                        "deleted_count": len(getattr(latest, "deleted_ids", []) or []) if latest else 0,
+                    }
+                )
+            except Exception:
+                logger.warning("Failed while awaiting memory background save", exc_info=True)
+                await publish_json_data(
+                    {
+                        "type": "memory_saved",
+                        "session_id": room_name,
+                        "status": "timeout",
+                    }
+                )
 
         ctx.room.on("data_received", handle_data_received)
 

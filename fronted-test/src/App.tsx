@@ -235,6 +235,7 @@ export function App() {
   const [statusText, setStatusText] = useState('停止中');
   const [connected, setConnected] = useState(false);
   const [connecting, setConnecting] = useState(false);
+  const [endingSession, setEndingSession] = useState(false);
   const [approval, setApproval] = useState<ApprovalRequestPayload | null>(null);
   const [statusEvents, setStatusEvents] = useState<AgentStatusEvent[]>([]);
 
@@ -243,6 +244,9 @@ export function App() {
   const activeSessionIdRef = useRef<string | undefined>(undefined);
   const activeModeRef = useRef<SessionMode>('voice');
   const abortControllerRef = useRef<AbortController | undefined>(undefined);
+  const memorySaveResolverRef = useRef<((payload: Record<string, unknown>) => void) | undefined>(
+    undefined,
+  );
   const generationRef = useRef(0);
   const streamSeqRef = useRef(0);
 
@@ -257,10 +261,12 @@ export function App() {
 
   function resetSessionUI(message: string): void {
     activeSessionIdRef.current = undefined;
+    memorySaveResolverRef.current = undefined;
     transport.setRoom(undefined);
     setApproval(null);
     setConnected(false);
     setConnecting(false);
+    setEndingSession(false);
     setVerifiedEmployee(null);
     setTextDraft('');
     setStatusText(message);
@@ -283,25 +289,79 @@ export function App() {
   }
 
   async function handleStop(): Promise<void> {
+    if (endingSession) return;
     generationRef.current += 1;
     abortControllerRef.current?.abort();
     const room = activeRoomRef.current;
     const sessionId = activeSessionIdRef.current;
+    const mode = activeModeRef.current;
     activeRoomRef.current = undefined;
+
+    let finalMessage = '会話を終了しました。';
     if (room) {
+      setEndingSession(true);
+      setConnected(false);
+      setApproval(null);
+      audioContainerRef.current?.replaceChildren();
       try {
+        await room.localParticipant.setMicrophoneEnabled(false);
+      } catch {
+        // Ignore if microphone was never enabled.
+      }
+      if (mode !== 'secretary') {
+        setStatusText('会話を終了しました。記憶を保存しています…');
+      } else {
+        setStatusText('会話を終了しています…');
+      }
+
+      try {
+        const waitForMemorySaved = new Promise<Record<string, unknown> | null>((resolve) => {
+          const timer = window.setTimeout(() => {
+            if (memorySaveResolverRef.current) {
+              memorySaveResolverRef.current = undefined;
+              resolve(null);
+            }
+          }, mode === 'secretary' ? 1500 : 25000);
+
+          memorySaveResolverRef.current = (payload) => {
+            window.clearTimeout(timer);
+            memorySaveResolverRef.current = undefined;
+            resolve(payload);
+          };
+        });
+
         const payload = JSON.stringify({
           type: 'end_session',
           session_id: sessionId,
         });
         await room.localParticipant.publishData(encoder.encode(payload), { reliable: true });
-        await new Promise((resolve) => window.setTimeout(resolve, 150));
+
+        const result = await waitForMemorySaved;
+        if (result && result.status === 'saved') {
+          const added = typeof result.added_count === 'number' ? result.added_count : 0;
+          const updated = typeof result.updated_count === 'number' ? result.updated_count : 0;
+          const deleted = typeof result.deleted_count === 'number' ? result.deleted_count : 0;
+          const parts: string[] = [];
+          if (added > 0) parts.push(`新規 ${added} 件`);
+          if (updated > 0) parts.push(`更新 ${updated} 件`);
+          if (deleted > 0) parts.push(`削除 ${deleted} 件`);
+          finalMessage =
+            parts.length > 0
+              ? `会話終了：記憶の保存が完了しました（${parts.join('・')}）。`
+              : '会話終了：記憶の保存が完了しました（新規の記憶変更なし）。';
+        } else if (result && result.status === 'skipped') {
+          finalMessage = '会話を終了しました。';
+        } else if (result && result.status === 'error') {
+          finalMessage = '会話を終了しました（記憶の保存中に一部エラーが発生しました）。';
+        } else if (mode !== 'secretary') {
+          finalMessage = '会話を終了しました（記憶の保存はバックグラウンドで継続中です）。';
+        }
       } catch {
         // Proceed with disconnect even if the data channel is already closed.
       }
       await room.disconnect();
     }
-    resetSessionUI('会話を終了しました（記憶の保存をバックグラウンドで実行します）。');
+    resetSessionUI(finalMessage);
   }
 
   async function handleSecretaryVerifyAndStart(): Promise<void> {
@@ -438,6 +498,10 @@ export function App() {
           if (!parsed.session_id || parsed.session_id === sessionId) {
             setApproval(parsed as unknown as ApprovalRequestPayload);
           }
+        } else if (parsed.type === 'memory_saved') {
+          if (!parsed.session_id || parsed.session_id === sessionId) {
+            memorySaveResolverRef.current?.(parsed);
+          }
         }
       } catch {
         // Ignore non-JSON payloads.
@@ -540,7 +604,7 @@ export function App() {
     <main className="app-shell">
       <header className="app-header">
         <h1>会話テスト（音声 / テキスト別セッション）</h1>
-        <fieldset className="mode-selector" disabled={connected || connecting}>
+        <fieldset className="mode-selector" disabled={connected || connecting || endingSession}>
           <legend>セッション種別（起動中は変更不可）</legend>
           <label className={`mode-option ${sessionMode === 'voice' ? 'mode-option-active' : ''}`}>
             <input
@@ -584,7 +648,7 @@ export function App() {
               type="text"
               className="user-id-input"
               value={userId}
-              disabled={connected || connecting}
+              disabled={connected || connecting || endingSession}
               placeholder={DEFAULT_USER_ID}
               onChange={(e) => handleUserIdChange(e.target.value)}
             />
@@ -606,7 +670,7 @@ export function App() {
                   type="text"
                   className="user-id-input"
                   value={employeeName}
-                  disabled={connected || connecting || verifying}
+                  disabled={connected || connecting || verifying || endingSession}
                   placeholder="例: 佐藤 花子"
                   onChange={(e) => setEmployeeName(e.target.value)}
                 />
@@ -618,7 +682,7 @@ export function App() {
                   type="text"
                   className="user-id-input"
                   value={employeeId}
-                  disabled={connected || connecting || verifying}
+                  disabled={connected || connecting || verifying || endingSession}
                   placeholder="例: EMP-1001"
                   onChange={(e) => setEmployeeId(e.target.value)}
                 />
@@ -644,7 +708,7 @@ export function App() {
           <button
             id="start"
             type="button"
-            disabled={connected || connecting || verifying}
+            disabled={connected || connecting || verifying || endingSession}
             onClick={() => {
               if (sessionMode === 'secretary') {
                 void handleSecretaryVerifyAndStart();

@@ -1,7 +1,7 @@
 # Care Support Voice Agent — ポートフォリオ技術解説・開発履歴
 
 > **対象範囲**: 本ドキュメントは `development plan/roadmap.md` および Git コミット履歴・各種設計資料に基づき、現時点で実装・検証済みの **Level 0 〜 Level 4** および **TEST-秘書モード（ローカル評価検証用）** の範囲をまとめています（未着手の **Level 3B の GCP 移行** は今後の展望としています）。  
-> **最終更新日**: 2026-11-22（TEST-秘書モード + DeepEval/Langfuse 手動評価基盤追加）
+> **最終更新日**: 2026-11-23（通常音声/テキスト評価対応・セッション後自動評価パイプライン・軽量 LLM 4 モデル比較検証）
 
 ---
 
@@ -161,6 +161,7 @@ uv --directory Test-LiveKit run python -m evaluations.evaluate_secretary --mode 
 | **2026-11-20** | `00deaca`, `4e5472b`, `e88555b` | Level 2 Agent Memory 基盤実装＆トレーシング統合、Level 3A ローカル RAG 基盤実装 |
 | **2026-11-21** | `32d1828` | RAG 評価手法・評価スクリプト整備 |
 | **2026-11-21** | `442c921`, `3c4ff07`, `d7f8293` | 実会話の Langfuse JSON 解析に基づく障害修正・機能強化・モデル最適化（詳細は次章） |
+| **2026-11-22〜23** | `2341761`, `98ddb05`, `2b77d5a`, `f79dbf7`, `f81cb10` | TEST-秘書モード・DeepEval 評価基盤の通常音声/テキストセッション拡張、セッション終了後の自動評価＆エクスポートパイプライン構築、軽量 LLM 4 モデル比較検証、Anthropic `cache_control` 対応・記憶保存完了通知 UI |
 
 ---
 
@@ -194,6 +195,25 @@ uv --directory Test-LiveKit run python -m evaluations.evaluate_secretary --mode 
 | `memory.prompt_injection` 等が `agent_session` より先に送信され **親スパンがリンク切れ** | `setup_langfuse()` 時点の未エクスポート親 ID を検知し、`ReportingExporter` で孤立親を補正 |
 | `memory.llm.extraction` / `consolidation` の **LLM コストが `total_cost` に未計上** | `trace_export.py` の対象を `llm_request` 限定から全 `generation` スパンへ拡張 |
 | 全セッションで **Prompt Caching が `cached=0`**（`livekit-plugins-openai` の自動キャッシュが OpenAI `gpt-5.6+` 系のみ対象） | `OPENROUTER_MODEL` を `anthropic/claude-haiku-5.5` から `openai/gpt-6-luna` へ変更し、`agent.py` に `prompt_cache_key` を設定（README にも理由を明記） |
+
+### サイクル 4: 軽量 LLM 4 モデル比較検証と自動評価・キャッシュ改善（2026-11-23）
+
+応答遅延の課題に対して、OpenRouter 経由で 4 つの軽量・高速 LLM を実会話で比較検証しました（Langfuse 実測値 + DeepEval 会話全体評価）。
+
+| モデル | 計測回数 | TTFT（平均 / p50 / 最大） | LLM 合計（平均 / 最大） | 実測から判明した特徴・課題 |
+| --- | ---: | --- | ---: | --- |
+| **`anthropic/claude-haiku-5.5`** | 39 回（6 セッション） | **1.00〜1.84 s** / `0.91〜1.67 s` / `2.58 s` | **1.22〜2.35 s** / `3.62 s` | **最速クラスかつスパイクが少なく安定**。`cache_control` 付与後の再計測（2026-11-23 22:14）で **`cache_read_input_tokens = 9,855`（最大 3,454 tok/ターン）の Prompt Caching ヒットを初確認**。一方、Judge（`qwen/qwen3.8-flash`）評価では冒頭自己紹介の重複・初期英語発話への言語追従漏れ・Web検索出典名の補完が課題として検出（`ContextRetention=1.0`, `SafetyBoundary=0.8`, `TextUX=0.7`, `LanguageAdaptation=0.6`, `TaskCompletion=0.3`） |
+| **`deepseek/deepseek-v4.1-flash-1017`** | 13 回（2 セッション） | **1.33〜2.57 s** / `1.18〜1.74 s` / **`8.64 s`** | **1.60〜2.99 s** / **`8.68 s`** | 通常時は高速で全ターン `cache_read_input_tokens` がヒット（最大 `4,096 tok`）。2 回目セッションでは DeepEval 5 指標すべて PASS（`TaskCompletion / ContextRetention / SafetyBoundary / LanguageAdaptation = 1.0`, `TextUX = 0.9`）を達成した一方、TTFT `8.64 s`・記憶抽出 `14.36 s` などプロバイダ側の遅延スパイクが大きい |
+| **`openai/gpt-6-luna`** | 62 回（5 セッション） | **1.19〜2.95 s** / `1.23〜2.02 s` / **`5.42 s`** | **1.39〜3.05 s** / **`5.43 s`** | 言語切替・日本語自然さは高評価（`1.0`）でキャッシュも機能するが、ターン増加時に TTFT が 2〜5 秒台へ悪化しやすい |
+| **`qwen/qwen3.8-flash`** | 7 回（1 セッション） | **2.88 s** / `2.81 s` / `4.33 s` | **3.15 s** / `4.37 s` | `TaskCompletion / ContextRetention / SafetyBoundary` すべて **1.0** と忠実性は最高だが、最遅＋日本語文中に中国語表現（「记忆中」）が混入（`LanguageAdaptation=0.7`）＋終了時の記憶抽出で `CancelledError` が発生 |
+
+#### 比較検証を通じて実施した基盤改善と結論
+- **Anthropic Prompt Caching の実測実証**: サイクル 3 で `cached=0` だった `anthropic/claude-haiku-5.5` に対し、`agent.py`（会話 LLM）および `memory/providers/llm_extractor.py`（記憶抽出 LLM）へ OpenRouter トップレベル `cache_control: {"type": "ephemeral"}` を追加し、実セッションで `cache_read_input_tokens = 9,855` のキャッシュヒットを確認。
+- **評価の公平性・忠実性強化**: `EVAL_JUDGE_MODEL=qwen/qwen3.8-flash` で採点 Judge を固定化。`agent.py` が `function_tools_executed` の実行結果をローカル限定（Git 除外）で保存し DeepEval の `context` へ渡すことで Web 検索・Memory・RAG 回答の根拠検証を可能化。自由会話での `tools.expected` 未定義時は `N/A` とし、Web 検索遅延は承認待ちを除いた `web_search.tavily` 実時間で集計。
+- **コスト計測と UX 改善**: `prices.json` / `trace_export.py` のキャッシュトークンフォールバック対応に加え、会話終了後の記憶保存ワーカー完了時に `memory_saved` イベントをブラウザへ通知し、画面上に保存完了（新規・更新・削除件数）を表示。
+- **判明した次フェーズの課題**:
+  1. 音声セッションでは TTS（`fishaudio/s2.1-pro`、平均 `1.91〜1.97 s` / 最大 `5.02 s`）も LLM と並ぶ遅延要因のため、低遅延 TTS の比較検証が必要。
+  2. セッション開始時にプロンプトへ自動注入した直近記憶（`memory.prompt_injection`）もローカルの `tool_results` / `injected_memories` として評価器へ渡すことで、DeepEval の根拠照合精度をさらに向上可能。
 
 ---
 
