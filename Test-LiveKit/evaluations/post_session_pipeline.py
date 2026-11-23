@@ -132,6 +132,16 @@ def build_voice_agent_eval_dataset(
     has_cost = False
     has_error = False
 
+    # Prefer pure API execution span (`web_search.tavily`) over approval-inclusive `search_web`
+    # so human approval wait time does not distort tool latency metrics.
+    tavily_lat_ms = [
+        round(float(obs["latency"]) * 1000.0, 2)
+        for obs in observations
+        if str(obs.get("name") or "") == "web_search.tavily"
+        and isinstance(obs.get("latency"), (int, float))
+    ]
+    tool_lat_ms.extend(tavily_lat_ms)
+
     for obs in observations:
         name = str(obs.get("name") or "")
         lat = obs.get("latency")
@@ -144,7 +154,9 @@ def build_voice_agent_eval_dataset(
             if is_err:
                 has_error = True
             if isinstance(lat, (int, float)):
-                tool_lat_ms.append(round(float(lat) * 1000.0, 2))
+                # Skip approval-inclusive search_web latency when web_search.tavily is recorded
+                if not (name == "search_web" and tavily_lat_ms):
+                    tool_lat_ms.append(round(float(lat) * 1000.0, 2))
             actual_tools.append(
                 {
                     "name": name,

@@ -149,3 +149,105 @@ def test_run_post_session_pipeline_end_to_end_offline(monkeypatch, tmp_path: Pat
     assert Path(summary["report_json_path"]).exists()
     assert Path(summary["report_md_path"]).exists()
     assert Path(summary["summary_path"]).exists()
+
+    # Unannotated live session must mark tool.selection.f1 and tool.unnecessary_call_rate as N/A (not FAIL)
+    report_data = json.loads(Path(summary["report_json_path"]).read_text(encoding="utf-8"))
+    by_metric = {m["metric"]: m for m in report_data["metrics"]}
+    assert by_metric["tool.selection.f1"]["status"] == "N/A"
+    assert by_metric["tool.unnecessary_call_rate"]["status"] == "N/A"
+
+
+def test_build_dataset_prefers_tavily_latency_over_approval_wait():
+    from evaluations.post_session_pipeline import build_voice_agent_eval_dataset
+
+    trace_doc = {
+        "observations": [
+            {"name": "search_web", "type": "TOOL", "latency": 18.95, "level": "DEFAULT"},
+            {"name": "web_search.tavily", "type": "SPAN", "latency": 0.998, "level": "DEFAULT"},
+        ]
+    }
+    dataset = build_voice_agent_eval_dataset(
+        session_id="frontend-test-text-1",
+        session_type="text",
+        transcript_doc={"turns": [{"role": "user", "text": "q"}, {"role": "assistant", "text": "a"}]},
+        trace_doc=trace_doc,
+    )
+    tool_lats = dataset["scenarios"][0]["latencies_ms"]["tool"]
+    assert tool_lats == [998.0]
+
+
+def test_trace_export_calculates_cost_with_cache_fallback_and_gpt6_luna():
+    from types import SimpleNamespace
+    from trace_export import enrich, load_prices
+
+    class _FakeStatus:
+        is_ok = True
+        description = None
+
+    span = SimpleNamespace(
+        name="llm_request",
+        context=SimpleNamespace(span_id=2, trace_id=1),
+        parent=None,
+        resource=None,
+        attributes={
+            "gen_ai.request.model": "openai/gpt-6-luna",
+            "gen_ai.usage.input_tokens": 2000,
+            "gen_ai.usage.output_tokens": 100,
+            "gen_ai.usage.cache_write.input_tokens": 1500,
+        },
+        events=[],
+        links=[],
+        kind=None,
+        status=_FakeStatus(),
+        start_time=0,
+        end_time=1,
+        instrumentation_scope=None,
+    )
+    prices = {"openai/gpt-6-luna": {"input_per_million": 0.4, "output_per_million": 1.6}}
+    enriched = enrich(span, prices)
+    assert enriched.attributes["langfuse.observation.metadata.cost_source"] == "configured_rate_estimate_usd"
+    cost_details = json.loads(enriched.attributes["langfuse.observation.cost_details"])
+    assert cost_details["input"] > 0 and cost_details["output"] > 0 and cost_details["cache_creation_input_tokens"] > 0
+
+
+def test_evaluate_full_conversation_passes_tool_results_as_context(monkeypatch):
+    from evaluations.evaluate_secretary import evaluate_full_conversation
+
+    seen_cases = []
+
+    class FakeConvMetric:
+        def __init__(self, **kwargs):
+            self.score = 0.95
+            self.reason = "ok"
+
+        def measure(self, conv_case):
+            seen_cases.append(conv_case)
+            return self.score
+
+        def is_successful(self):
+            return True
+
+    monkeypatch.setattr("deepeval.metrics.ConversationalGEval", FakeConvMetric)
+    evaluate_full_conversation(
+        transcript_doc={
+            "session_mode": "text",
+            "turns": [
+                {"role": "user", "text": "最新のMacBookについて調べて"},
+                {"role": "assistant", "text": "CNBCの記事によるとM5搭載モデルが発表されました。"},
+            ],
+            "tool_results": [
+                {
+                    "tool_name": "search_web",
+                    "arguments": '{"query": "MacBook M5"}',
+                    "output": '{"results": [{"url": "https://www.cnbc.com/...", "title": "Apple M5"}]}',
+                    "is_error": False,
+                }
+            ],
+        },
+        judge_model="dummy",
+        session_type="text",
+    )
+    assert seen_cases
+    assert seen_cases[0].context is not None
+    assert "search_web" in seen_cases[0].context[0]
+    assert "cnbc.com" in seen_cases[0].context[0]

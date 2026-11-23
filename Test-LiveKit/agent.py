@@ -295,6 +295,7 @@ async def entrypoint(ctx: JobContext) -> None:
             logger.warning("Failed to initialize secretary DatabaseManager", exc_info=True)
     recorded_messages: list[ConversationMessage] = []
     confirmed_turns: list[dict[str, Any]] = []
+    recorded_tool_results: list[dict[str, Any]] = []
 
     def _record_confirmed_turn(payload: dict[str, Any]) -> None:
         if payload.get("status") not in ("final", "interrupted"):
@@ -586,6 +587,23 @@ async def entrypoint(ctx: JobContext) -> None:
         elif new_state == "speaking":
             emit_status("speaking", "running", f"speak-{turn_id}", "回答中…")
 
+    @session.on("function_tools_executed")
+    def handle_tools_executed(event: object) -> None:
+        calls = getattr(event, "function_calls", None) or []
+        outputs = getattr(event, "function_call_outputs", None) or []
+        for call, out in zip(calls, outputs, strict=False):
+            tool_name = str(getattr(call, "name", "") or getattr(out, "name", "") or "")
+            raw_args = getattr(call, "arguments", "")
+            raw_output = getattr(out, "output", "")
+            recorded_tool_results.append(
+                {
+                    "tool_name": tool_name,
+                    "arguments": str(raw_args)[:400],
+                    "output": str(raw_output)[:1200],
+                    "is_error": bool(getattr(out, "is_error", False)),
+                }
+            )
+
     @session.on("user_input_transcribed")
     def handle_user_transcribed(event: object) -> None:
         payload = transcript_tracker.on_user_transcribed(
@@ -670,6 +688,7 @@ async def entrypoint(ctx: JobContext) -> None:
                                 else None
                             ),
                             "turns": confirmed_turns,
+                            "tool_results": recorded_tool_results,
                         }
                         encoded_doc = json.dumps(transcript_doc, ensure_ascii=False, indent=2)
                         saved_transcript_path = transcript_dir / f"{session_id}.json"

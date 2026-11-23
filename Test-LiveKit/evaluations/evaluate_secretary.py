@@ -457,6 +457,22 @@ def _conversation_metric_specs(
     )
 
 
+def _build_tool_results_context(transcript_doc: dict[str, Any]) -> list[str] | None:
+    tool_results = transcript_doc.get("tool_results") or []
+    if not tool_results:
+        return None
+    lines = ["このセッションで実際に実行されたツールの結果:"]
+    for idx, item in enumerate(tool_results, start=1):
+        if not isinstance(item, dict):
+            continue
+        name = str(item.get("tool_name") or "unknown")
+        status = "ERROR" if item.get("is_error") else "OK"
+        args = str(item.get("arguments") or "")[:200]
+        output = str(item.get("output") or "")[:800]
+        lines.append(f"{idx}. {name} [{status}] args={args} -> output={output}")
+    return ["\n".join(lines)] if len(lines) > 1 else None
+
+
 def evaluate_full_conversation(
     *,
     transcript_doc: dict[str, Any],
@@ -480,14 +496,20 @@ def evaluate_full_conversation(
         raise ValueError("会話全体の評価には最低2発話（ユーザー＋AI）が必要です。")
 
     resolved_type = session_type if session_type in SUPPORTED_SESSION_TYPES else "secretary"
-    context = (
-        _build_employee_ground_truth_context(employee_id)
-        if resolved_type == "secretary"
-        else None
-    )
+    context_blocks: list[str] = []
+    if resolved_type == "secretary":
+        emp_ctx = _build_employee_ground_truth_context(employee_id)
+        if emp_ctx:
+            context_blocks.extend(emp_ctx)
+    tool_ctx = _build_tool_results_context(transcript_doc)
+    if tool_ctx:
+        context_blocks.extend(tool_ctx)
+    context: list[str] | None = context_blocks or None
+
     scenario_text, metric_specs = _conversation_metric_specs(resolved_type)
     if context:
-        scenario_text = f"{scenario_text}\n\n[参照データ]\n{context[0]}"
+        joined_ctx = "\n\n".join(context)
+        scenario_text = f"{scenario_text}\n\n[参照データ]\n{joined_ctx}"
     eval_params = [MultiTurnParams.ROLE, MultiTurnParams.CONTENT, MultiTurnParams.SCENARIO]
 
     conv_case = ConversationalTestCase(

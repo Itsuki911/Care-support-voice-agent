@@ -83,11 +83,14 @@ def enrich(
             if created: usage['cache_creation_input_tokens'] = created
             attrs['langfuse.observation.usage_details'] = json.dumps(usage)
             rates = prices.get(model, {})
-            keys = {'input': 'input_per_million', 'output': 'output_per_million',
-                    'cache_read_input_tokens': 'cached_input_per_million',
-                    'cache_creation_input_tokens': 'cache_creation_input_per_million'}
-            if all(keys[key] in rates for key in usage):
-                cost = {key: count * rates[keys[key]] / 1_000_000 for key, count in usage.items()}
+            if 'input_per_million' in rates and 'output_per_million' in rates:
+                rate_map = {
+                    'input': rates['input_per_million'],
+                    'output': rates['output_per_million'],
+                    'cache_read_input_tokens': rates.get('cached_input_per_million', rates['input_per_million']),
+                    'cache_creation_input_tokens': rates.get('cache_creation_input_per_million', rates['input_per_million']),
+                }
+                cost = {key: count * rate_map[key] / 1_000_000 for key, count in usage.items()}
                 attrs['langfuse.observation.cost_details'] = json.dumps(cost)
                 attrs['langfuse.observation.metadata.cost_source'] = 'configured_rate_estimate_usd'
         ttft = attrs.get('gen_ai.response.time_to_first_chunk')
