@@ -72,8 +72,8 @@ function ToolExecutions() {
   );
 }
 
-export default function SessionView() {
-  const [view, setView] = useState<(typeof views)[number]["label"]>("会話");
+export default function SessionView({ initialView }: { initialView: "会話" | "評価結果" }) {
+  const [view, setView] = useState<(typeof views)[number]["label"]>(initialView);
   const [showTimestamps, setShowTimestamps] = useState(true);
   const [showAudioStatus, setShowAudioStatus] = useState(true);
   const [annotationView, setAnnotationView] = useState<"コメント" | "ラベル">("コメント");

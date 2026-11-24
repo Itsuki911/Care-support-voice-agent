@@ -12,10 +12,11 @@ const groups = [
 const destinations: Record<string, { section: string; href: string } | undefined> = {
   "セッション": { section: "sessions", href: "/sessions" },
   "トレース": { section: "traces", href: "/traces" },
+  "評価結果": { section: "evaluations", href: "/evaluations" },
   "Agent設定": { section: "agent-config", href: "/config/agent" },
 };
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "agent-config" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "agent-config" }) {
   return (
       <aside>
         <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>
