@@ -1,0 +1,10 @@
+.experiment-nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.experiment-nav a { padding: 7px 11px; border: 1px solid #d7deea; border-radius: 7px; text-decoration: none; font-size: 13px; }
+.experiment-nav a[aria-current] { border-color: #9dbcea; background: #eaf2ff; font-weight: 700; }
+.experiment-setup { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 15px 0 0; font-size: 13px; }
+.experiment-setup dt, .experiment-caption, .experiment-case-id { color: #45546a; }
+.experiment-setup dd { margin: 3px 0 0; overflow-wrap: anywhere; font-weight: 650; }
+.experiment-caption { margin: 7px 0 10px; font-size: 13px; }
+.experiment-case-id { display: block; margin-top: 3px; }
+.observation-list tfoot td { background: #f0f3f9; font-weight: 700; }
+@media (max-width: 540px) { .experiment-setup { grid-template-columns: minmax(0, 1fr); } }

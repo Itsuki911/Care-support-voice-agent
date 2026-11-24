@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { Activity, AudioLines, BarChart3, Clock3, Database, FileText, House, MessageCircle, Settings, Shield, SlidersHorizontal, Tag, TrendingUp } from "lucide-react";
+import { Activity, AudioLines, BarChart3, Clock3, Database, FileText, GitCompareArrows, House, MessageCircle, Settings, Shield, SlidersHorizontal, Tag, TrendingUp } from "lucide-react";
 
 const groups = [
   { label: "観測・分析", items: [[MessageCircle, "セッション"], [TrendingUp, "トレース"], [BarChart3, "評価結果"], [BarChart3, "評価モニタリング"]] },
   { label: "安全性評価", items: [[Shield, "Safety Evaluation"]] },
   { label: "設定管理", items: [[SlidersHorizontal, "Agent設定"], [FileText, "評価設定（DeepEval）"], [Shield, "安全性設定"], [Activity, "観測設定"], [Clock3, "設定バージョン履歴"]] },
-  { label: "データ管理", items: [[Database, "データセット"]] },
+  { label: "データ管理", items: [[Database, "データセット"], [GitCompareArrows, "実験（A/Bテスト）"]] },
   { label: "その他", items: [[Tag, "アノテーション"], [Clock3, "実行履歴"]] },
 ] as const;
 
@@ -21,10 +21,11 @@ const destinations: Record<string, { section: string; href: string } | undefined
   "観測設定": { section: "observability-config", href: "/config/observability" },
   "設定バージョン履歴": { section: "config-history", href: "/config/history" },
   "データセット": { section: "datasets", href: "/datasets" },
+  "実験（A/Bテスト）": { section: "experiments", href: "/experiments" },
   "アノテーション": { section: "annotations", href: "/annotations" },
 };
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" | "observability-config" | "config-history" | "datasets" | "annotations" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" | "observability-config" | "config-history" | "datasets" | "annotations" | "experiments" }) {
   return (
       <aside>
         <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>

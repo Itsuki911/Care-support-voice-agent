@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeftRight, AudioLines, Bot, Check, Database, FileText, Layers3, Network, Plus, Rocket, RotateCcw, Save, Settings, Shield, Wrench, X } from "lucide-react";
 import LlmEditor from "./llm-editor";
@@ -170,7 +171,7 @@ export default function AgentSettings() {
             {differences.map(([label, before, after]) => <div key={label}><dt>{label}</dt><dd><del>{before || "（空）"}</del><ins>{after || "（空）"}</ins></dd></div>)}
           </dl>}
         </section>}
-        {tab === "実験（A/Bテスト）" && <section className="card agent-card"><h2>実験（A/Bテスト）</h2><p>実験結果はありません。</p></section>}
+        {tab === "実験（A/Bテスト）" && <section className="card agent-card"><h2>実験（A/Bテスト）</h2><p><Link href="/experiments">実験結果を開く →</Link></p></section>}
       </div>
 
       <div className="agent-stack">
