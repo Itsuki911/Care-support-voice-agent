@@ -23,9 +23,10 @@ const destinations: Record<string, { section: string; href: string } | undefined
   "データセット": { section: "datasets", href: "/datasets" },
   "実験（A/Bテスト）": { section: "experiments", href: "/experiments" },
   "アノテーション": { section: "annotations", href: "/annotations" },
+  "実行履歴": { section: "runs", href: "/runs" },
 };
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" | "observability-config" | "config-history" | "datasets" | "annotations" | "experiments" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" | "observability-config" | "config-history" | "datasets" | "annotations" | "experiments" | "runs" }) {
   return (
       <aside>
         <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>
