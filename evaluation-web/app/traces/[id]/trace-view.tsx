@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ArrowLeft, Box, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Coins, Database, Layers3, Search, Shield } from "lucide-react";
+import { formatUsd } from "../../format-usd";
 import { session } from "../../sessions/demo-session";
 import { demoTraceId, relatedSessionId, root, spans, type Span } from "../demo-trace";
 
 const sections = ["概要", "入力 / 出力", "ツール呼び出し", "メタデータ", "評価・注釈"] as const;
-const costText = (cost: number | null) => cost === null ? "N/A" : `$${cost.toFixed(4)}`;
 const ownCosts = spans.filter(({ span }) => !span.children);
 const costs = ownCosts.reduce((total, { span }) => total + (span.cost ?? 0), 0);
 const missing = ownCosts.filter(({ span }) => span.cost === null).length;
@@ -18,7 +18,7 @@ function SpanDetail({ span, move, index }: { span: Span; move: (index: number) =
   const fields = [
     ["開始時刻", `2025/01/21 ${span.start} JST`], ["所要時間", `${span.duration.toFixed(2)} s`],
     ["ステータス", "完了"], ["モデル", llm ? session.model : "N/A"],
-    ["トークン数", span.tokens?.toLocaleString("ja-JP") ?? "N/A"], ["推定コスト", costText(span.cost)],
+    ["トークン数", span.tokens?.toLocaleString("ja-JP") ?? "N/A"], ["推定コスト", formatUsd(span.cost)],
   ];
 
   return <section className="card trace-panel" aria-label="選択したスパン">
@@ -66,7 +66,7 @@ export default function TraceView() {
     { icon: Clock3, label: "合計実行時間", value: `${root.duration.toFixed(2)} s` },
     { icon: Layers3, label: "スパン数", value: spans.length },
     { icon: Database, label: "トークン数（合計）", value: root.tokens?.toLocaleString("ja-JP") },
-    { icon: Coins, label: "推定コスト（小計）", value: costText(costs) },
+    { icon: Coins, label: "推定コスト（小計）", value: formatUsd(costs) },
     { icon: Shield, label: "安全性", value: "未実施" },
   ];
 
@@ -103,7 +103,7 @@ export default function TraceView() {
                   <strong>{span.name}</strong><span>{span.description}</span>
                 </button>
               </div></td>
-              <td>{span.start}</td><td>{span.duration.toFixed(2)} s</td><td>{span.tokens?.toLocaleString("ja-JP") ?? "N/A"}</td><td>{costText(span.cost)}</td><td><span className="trace-done"><Check size={13} /> 完了</span></td>
+              <td>{span.start}</td><td>{span.duration.toFixed(2)} s</td><td>{span.tokens?.toLocaleString("ja-JP") ?? "N/A"}</td><td>{formatUsd(span.cost)}</td><td><span className="trace-done"><Check size={13} /> 完了</span></td>
             </tr>)}
             {rows.length === 0 && <tr><td colSpan={6}>条件に一致するスパンはありません。</td></tr>}</tbody>
           </table></div>

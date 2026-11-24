@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import {
-  ArrowLeft, BarChart3, Bot, CalendarDays, Check, ClipboardList, Copy, Database,
+  ArrowLeft, BarChart3, Bot, CalendarDays, Check, ClipboardList, Coins, Copy, Database,
   GitBranch, MessageCircle, Settings, Shield, UserRound, VolumeX, Wrench,
 } from "lucide-react";
+import { formatUsd } from "../../format-usd";
 import { session } from "../demo-session";
 import { demoTraceId } from "../../traces/demo-trace";
 
@@ -27,6 +28,22 @@ const metadata = [
   ["評価設定", session.evaluatorConfig],
   ["アプリケーション", session.application],
 ] as const;
+
+const usageLabels = ["開始時刻", "経過時間", "トークン", "コスト ($)", "ステータス"] as const;
+
+function UsageSummary() {
+  const tokens = session.turns.reduce((total, turn) => total + turn.tokens, 0);
+  const cost = session.turns.reduce((total, turn) => total + turn.costUsd, 0);
+
+  return <section className="card session-card">
+    <h2><Coins size={19} /> 利用情報</h2>
+    <dl className="session-usage">
+      <div><dt>トークン（小計）</dt><dd>{tokens.toLocaleString("ja-JP")}</dd></div>
+      <div><dt>推定コスト（小計）</dt><dd>{formatUsd(cost)}</dd></div>
+    </dl>
+    <p className="session-muted">表示中の発話 {session.turns.length} 件の合計（USD・合成データ）</p>
+  </section>;
+}
 
 function EvaluationSummary() {
   return (
@@ -103,14 +120,26 @@ export default function SessionView() {
                 <label><input type="checkbox" checked={showTimestamps} onChange={(event) => setShowTimestamps(event.target.checked)} /> タイムスタンプ表示</label>
               </div>
             </div>
+            <div className="turn-usage-header" aria-hidden="true">
+              {usageLabels.map((label, index) => (showTimestamps || index !== 0) && <span key={label}>{label}</span>)}
+            </div>
             <ol className="conversation-turns">
-              {session.turns.map(({ time, speaker, text }) => {
+              {session.turns.map(({ time, speaker, text, elapsed, tokens, costUsd, status }) => {
                 const isAgent = speaker === "エージェント";
+                const values = [time, elapsed, tokens.toLocaleString("ja-JP"), formatUsd(costUsd), status];
                 return <li key={time} className={isAgent ? "agent-turn" : undefined}>
-                  {showTimestamps && <time>{time}</time>}
-                  <span className="speaker-icon">{isAgent ? <Bot size={21} /> : <UserRound size={21} />}</span>
-                  <div><strong>{speaker}</strong><p className="speech">{text}</p>
-                  {showAudioStatus && <p className="audio-unavailable"><VolumeX size={15} /> 音声データなし</p>}</div>
+                  <div className="turn-message">
+                    {showTimestamps && <time>{time}</time>}
+                    <span className="speaker-icon">{isAgent ? <Bot size={21} /> : <UserRound size={21} />}</span>
+                    <div><strong>{speaker}</strong><p className="speech">{text}</p>
+                    {showAudioStatus && <p className="audio-unavailable"><VolumeX size={15} /> 音声データなし</p>}</div>
+                  </div>
+                  <dl className="turn-usage">
+                    {usageLabels.map((label, index) => (showTimestamps || index !== 0) && <div key={label}>
+                      <dt>{label}</dt>
+                      <dd>{label === "ステータス" ? <span className="session-pill"><Check size={13} /> {status}</span> : values[index]}</dd>
+                    </div>)}
+                  </dl>
                 </li>;
               })}
             </ol>
@@ -143,6 +172,7 @@ export default function SessionView() {
             </dl>
             <p role="status" className="session-muted">{copyStatus}</p>
           </section>
+          <UsageSummary />
           <section className="card session-card">
             <h2><ClipboardList size={19} /> アノテーション</h2>
             <div className="session-tabs annotation-tabs" role="group" aria-label="アノテーションの表示項目">
