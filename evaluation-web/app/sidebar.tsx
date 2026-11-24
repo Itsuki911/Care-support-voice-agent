@@ -9,16 +9,16 @@ const groups = [
   { label: "その他", items: [[Tag, "アノテーション"], [Clock3, "実行履歴"]] },
 ] as const;
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" }) {
   return (
       <aside>
-        <div className="brand"><AudioLines size={42} /> <span>{section === "sessions" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>
+        <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>
         <nav aria-label="管理画面">
           <Link className={section === "dashboard" ? "current" : "nav-item"} href="/" aria-current={section === "dashboard" ? "page" : undefined}><House /> ダッシュボード</Link>
           {groups.map(({ label, items }) => (
             <div className="nav-group" key={label}>
               <div className="nav-label">{label}</div>
-              {items.map(([Icon, name]) => <div className={section === "sessions" && name === "セッション" ? "current" : "nav-item"} key={name}><Icon />{name}</div>)}
+              {items.map(([Icon, name]) => <div className={section === "sessions" && name === "セッション" || section === "traces" && name === "トレース" ? "current" : "nav-item"} key={name}><Icon />{name}</div>)}
             </div>
           ))}
         </nav>

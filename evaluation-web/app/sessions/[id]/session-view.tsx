@@ -7,6 +7,7 @@ import {
   GitBranch, MessageCircle, Settings, Shield, UserRound, VolumeX, Wrench,
 } from "lucide-react";
 import { session } from "../demo-session";
+import { demoTraceId } from "../../traces/demo-trace";
 
 const views = [
   { label: "会話", icon: MessageCircle },
@@ -129,7 +130,8 @@ export default function SessionView() {
           <h2>実行時設定</h2><dl className="session-fields">{metadata.slice(3, 6).map(([key, value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}</dl>
           <p className="session-muted">設定の詳細スナップショットは未取得です。</p>
         </section>}
-        {(view === "トレース" || view === "関連データ") && <section className="card session-card session-wide"><h2>{view}</h2><p className="session-muted">このモックに表示できる{view}はありません。</p></section>}
+        {view === "トレース" && <section className="card session-card session-wide"><h2>トレース</h2><p className="session-muted"><Link href={`/traces/${demoTraceId}`}>{demoTraceId} の詳細を開く</Link></p></section>}
+        {view === "関連データ" && <section className="card session-card session-wide"><h2>{view}</h2><p className="session-muted">このモックに表示できる{view}はありません。</p></section>}
         <div className="session-stack">
           <section className="card session-card">
             <h2>セッション詳細</h2>
