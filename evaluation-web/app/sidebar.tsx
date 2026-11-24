@@ -4,7 +4,7 @@ import { Activity, AudioLines, BarChart3, Clock3, Database, FileText, House, Mes
 const groups = [
   { label: "観測・分析", items: [[MessageCircle, "セッション"], [TrendingUp, "トレース"], [BarChart3, "評価結果"], [BarChart3, "評価モニタリング"]] },
   { label: "安全性評価", items: [[Shield, "Safety Evaluation"]] },
-  { label: "設定管理", items: [[SlidersHorizontal, "Agent設定"], [FileText, "評価設定（DeepEval）"], [Shield, "安全性設定"], [Activity, "観測設定"]] },
+  { label: "設定管理", items: [[SlidersHorizontal, "Agent設定"], [FileText, "評価設定（DeepEval）"], [Shield, "安全性設定"], [Activity, "観測設定"], [Clock3, "設定バージョン履歴"]] },
   { label: "データ管理", items: [[Database, "データセット"]] },
   { label: "その他", items: [[Tag, "アノテーション"], [Clock3, "実行履歴"]] },
 ] as const;
@@ -19,9 +19,10 @@ const destinations: Record<string, { section: string; href: string } | undefined
   "評価設定（DeepEval）": { section: "evaluator-config", href: "/config/evaluator" },
   "安全性設定": { section: "safety-config", href: "/config/safety" },
   "観測設定": { section: "observability-config", href: "/config/observability" },
+  "設定バージョン履歴": { section: "config-history", href: "/config/history" },
 };
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" | "observability-config" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" | "observability-config" | "config-history" }) {
   return (
       <aside>
         <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>
