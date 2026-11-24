@@ -213,3 +213,9 @@
 ### Cloudflare Workers / Containers
 - **一言で**: エッジ環境で高速に動くサーバーレス実行基盤（Workers）と、常駐コンテナを動かせる基盤（Containers）。
 - **このシステムでの使われ方**: 将来のクラウド公開用に、ブラウザ UI＆トークン発行を Workers、Python エージェントを Containers で動かす構成（`wrangler.jsonc` / `Dockerfile`）を整備しています。
+
+### Next.js / Recharts
+
+- **一言で**: Next.js は React で Web アプリを構築するフレームワークです。Recharts は React 用のグラフライブラリです。
+- **詳しい解説**: Next.js の App Router はファイル構成から画面ルートを定義します。Recharts は配列データから折れ線や円グラフを描画します。
+- **このシステムでの使われ方**: `evaluation-web/` で管理画面のルートを定義し、合成の評価推移と安全性テスト件数を表示します。
