@@ -31,3 +31,9 @@ export const session = {
     { name: "search_memories", time: "00:27", description: "案内方法の希望を検索" },
   ],
 } as const;
+
+export const demoSessionAnnotation = {
+  author: "評価者A",
+  date: "2025/01/21 15:02 JST",
+  comment: "受付時間と予約が必要な条件が明確です。曜日ごとの例外も案内できるとさらに分かりやすくなります。",
+};

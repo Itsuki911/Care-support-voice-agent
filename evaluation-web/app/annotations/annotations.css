@@ -1,0 +1,7 @@
+.annotations-table td { vertical-align: top; }
+.annotations-table td:first-child { min-width: 230px; white-space: normal; }
+.annotations-table small { display: block; margin-block: 3px; color: #45546a; }
+.annotation-labels { display: flex; flex-wrap: wrap; gap: 4px; }
+.annotation-labels span { padding: 2px 7px; background: #eaf2ff; color: #24558e; border-radius: 12px; }
+.annotations-table [data-review="確認中"] { background: #fff2ce; color: #714f04; }
+.annotations-table [data-review="対応済み"] { background: #dff5e9; color: #076745; }

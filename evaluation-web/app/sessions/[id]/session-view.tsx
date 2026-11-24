@@ -7,7 +7,7 @@ import {
   GitBranch, MessageCircle, Settings, Shield, UserRound, VolumeX, Wrench,
 } from "lucide-react";
 import { formatUsd } from "../../format-usd";
-import { session } from "../demo-session";
+import { demoSessionAnnotation, session } from "../demo-session";
 import { demoTraceId } from "../../traces/demo-trace";
 
 const views = [
@@ -173,7 +173,7 @@ export default function SessionView({ initialView }: { initialView: "会話" | "
             <p role="status" className="session-muted">{copyStatus}</p>
           </section>
           <UsageSummary />
-          <section className="card session-card">
+          <section id="annotations" className="card session-card">
             <h2><ClipboardList size={19} /> アノテーション</h2>
             <div className="session-tabs annotation-tabs" role="group" aria-label="アノテーションの表示項目">
               {(["コメント", "ラベル"] as const).map((label) => <button key={label} type="button" aria-pressed={annotationView === label} onClick={() => setAnnotationView(label)}>{label}</button>)}
@@ -192,7 +192,7 @@ export default function SessionView({ initialView }: { initialView: "会話" | "
               <p className="session-muted">追加したコメントは再読み込みすると消えます。</p>
               <ul className="session-comments" aria-live="polite">
                 {comments.map((comment, index) => <li key={comments.length - index}><strong>自分</strong><p>{comment}</p></li>)}
-                <li><strong>評価者A</strong><time>2025/01/21 15:02 JST</time><p>受付時間と予約が必要な条件が明確です。曜日ごとの例外も案内できるとさらに分かりやすくなります。</p></li>
+                <li><strong>{demoSessionAnnotation.author}</strong><time>{demoSessionAnnotation.date}</time><p>{demoSessionAnnotation.comment}</p></li>
               </ul>
             </> : <div className="session-labels">{session.labels.map((label) => <span key={label}>{label}</span>)}</div>}
           </section>
