@@ -16,9 +16,10 @@ const destinations: Record<string, { section: string; href: string } | undefined
   "評価結果": { section: "evaluations", href: "/evaluations" },
   "Safety Evaluation": { section: "safety", href: "/safety" },
   "Agent設定": { section: "agent-config", href: "/config/agent" },
+  "評価設定（DeepEval）": { section: "evaluator-config", href: "/config/evaluator" },
 };
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" }) {
   return (
       <aside>
         <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>
