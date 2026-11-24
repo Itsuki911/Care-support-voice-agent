@@ -1,0 +1,73 @@
+.agent-main { min-width: 0; }
+.agent-header { min-height: 80px; }
+.agent-tabs, .agent-card-head, .agent-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.agent-tabs { padding: 12px 16px 0; border-bottom: 1px solid #dce2ec; }
+.agent-tabs button { color: #263955; background: transparent; padding: 9px 15px; border: 0; border-bottom: 3px solid transparent; cursor: pointer; }
+.agent-tabs button[aria-pressed="true"] { color: #075ac9; border-bottom-color: #176ef2; font-weight: 700; }
+.agent-grid { display: grid; grid-template-columns: minmax(185px, .8fr) minmax(0, 2fr) minmax(240px, 1.06fr); gap: 13px; padding: 15px; align-items: start; }
+.agent-stack { display: grid; gap: 13px; min-width: 0; }
+.agent-card { min-width: 0; padding: 14px; }
+.agent-card-head { justify-content: space-between; }
+.agent-card h2 { font-size: 17px; }
+.agent-card p { font-size: 13px; color: #45546a; margin-top: 5px; }
+.agent-active { color: #076745; background: #dff5e9; border-radius: 14px; font: 700 11px system-ui, sans-serif; padding: 3px 7px; white-space: nowrap; }
+.agent-version { display: block; font-size: 27px; margin-top: 8px; }
+.agent-version-meta { margin: 12px 0 0; font-size: 13px; }
+.agent-version-meta dt { color: #45546a; }
+.agent-version-meta dd { margin: 3px 0 7px; }
+.agent-button { display: inline-flex; gap: 6px; justify-content: center; align-items: center; border: 1px solid #d7deea; border-radius: 7px; padding: 7px 10px; background: #f9fbff; color: #163968; cursor: pointer; font-size: 13px; font-weight: 650; }
+.agent-button:disabled { cursor: default; background: #e9edf5; color: #52627a; }
+.agent-full { width: 100%; margin-top: 12px; }
+.agent-primary { background: #0869ee; border-color: #0869ee; color: white; }
+.agent-categories { display: grid; gap: 3px; }
+.agent-categories button { display: flex; align-items: center; gap: 9px; text-align: left; padding: 9px; border: 0; border-radius: 7px; background: transparent; color: #1c2d48; cursor: pointer; font-size: 14px; }
+.agent-categories button[aria-pressed="true"] { background: #e3edff; color: #075ac9; font-weight: 700; }
+.agent-fields { display: grid; grid-template-columns: minmax(70px, .8fr) minmax(0, 4fr); gap: 12px 9px; margin: 18px 0; align-items: start; font-size: 14px; }
+.agent-fields > label, .agent-fields > span { padding-top: 8px; }
+.agent-fields label span { color: #b32335; }
+.agent-fields input, .agent-fields textarea, .agent-compare select { width: 100%; min-width: 0; font: inherit; color: inherit; border: 1px solid #d7deea; border-radius: 7px; padding: 8px; background: #fff; }
+.agent-fields input:read-only, .agent-fields textarea:read-only { background: #f8faff; }
+.agent-fields textarea { resize: vertical; min-height: 74px; }
+.agent-tags { display: flex; gap: 5px; flex-wrap: wrap; align-items: center; }
+.agent-tags > span { background: #e3edff; border-radius: 15px; color: #28538a; padding: 4px 8px; display: flex; gap: 4px; align-items: center; overflow-wrap: anywhere; min-width: 0; }
+.agent-tags > span button { display: grid; place-items: center; padding: 0; cursor: pointer; color: inherit; background: transparent; border: 0; }
+.agent-tag-input { display: flex; gap: 5px; width: 100%; }
+.agent-tag-input button { flex: none; }
+.agent-structure { border-block: 1px solid #edf1f7; padding: 12px 0; }
+.agent-summary { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; margin-top: 9px; }
+.agent-summary button { display: flex; text-align: left; align-items: center; gap: 8px; color: #111b2d; padding: 8px; border-radius: 9px; border: 1px solid #dce3ef; background: #f8faff; cursor: pointer; min-width: 0; }
+.agent-summary button > span:last-child { min-width: 0; overflow-wrap: anywhere; }
+.agent-summary button strong { display: block; font-size: 14px; }
+.agent-summary button > span > span { display: block; color: #45546a; font-size: 12px; }
+.agent-summary .icon { width: 36px; height: 36px; }
+.agent-actions { margin-top: 12px; }
+.agent-actions p { flex: 1 1 150px; margin: 0; padding: 8px; background: #ebf6f0; border-radius: 7px; }
+.agent-apply { display: flex; gap: 5px; align-items: center; color: #28538a; margin-top: 10px; font-size: 13px; }
+.agent-history { list-style: none; margin: 9px 0 0; padding: 0; }
+.agent-history li { padding: 8px 5px; border-bottom: 1px solid #edf1f7; display: grid; grid-template-columns: minmax(24px, auto) minmax(0, 1fr) auto; align-items: center; gap: 4px 6px; color: #45546a; font-size: 11px; }
+.agent-history li strong { font-size: 14px; color: #111b2d; }
+.agent-history .agent-history-active { border-left: 3px solid #176ef2; background: #eaf1ff; border-radius: 5px; }
+.agent-history-active strong { grid-column: 1 / -1; }
+.agent-history-active time { grid-column: 1 / 3; }
+.agent-link { border: 0; padding: 0; color: #075ac9; background: transparent; cursor: pointer; font-size: 12px; }
+.agent-compare { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: end; gap: 6px; margin-top: 8px; font-size: 13px; }
+.agent-compare select { display: block; margin-top: 4px; }
+.agent-diff { font-size: 14px; }
+.agent-diff div { border-top: 1px solid #edf1f7; padding: 8px 0; }
+.agent-diff dd { margin: 6px 0 0; display: grid; gap: 4px; overflow-wrap: anywhere; }
+.agent-diff del, .agent-diff ins { padding: 5px; border-radius: 4px; }
+.agent-diff del { background: #fce8ec; }
+.agent-diff ins { background: #e5f5ec; }
+@media (max-width: 1350px) {
+  .agent-grid { grid-template-columns: minmax(165px, .72fr) minmax(0, 1.8fr) minmax(205px, .95fr); gap: 9px; padding: 10px; }
+  .agent-card { padding: 10px; }
+  .agent-summary .icon { display: none; }
+}
+@media (max-width: 1100px) {
+  .agent-grid { grid-template-columns: minmax(165px, 1fr) minmax(0, 3fr); }
+  .agent-grid > .agent-stack:last-child { grid-column: 1 / -1; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 800px) {
+  .agent-grid, .agent-grid > .agent-stack:last-child { grid-template-columns: minmax(0, 1fr); }
+  .agent-categories { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}

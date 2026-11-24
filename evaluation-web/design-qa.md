@@ -31,3 +31,9 @@ final result: blocked
 ブラウザーで確認した幅では発話メタデータは発話本文の下に表示されます。参照と同じビューポートの比較は未実施です。
 
 final result: blocked
+
+## Agent 基本設定
+
+参照は Drive の `05_agent_settings.png`。Chrome で三列の設定画面を表示し、アクティブ版からのドラフト作成、設定名の編集と保存、バージョン間の差分表示を確認しました。参照と同じ画面幅での比較は未実施です。
+
+final result: blocked
