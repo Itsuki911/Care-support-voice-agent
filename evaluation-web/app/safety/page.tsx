@@ -52,7 +52,7 @@ export default async function SafetyPage({ searchParams }: { searchParams: Searc
           </article>)}
         </section>
         <section className="card panel">
-          <div className="panel-heading"><h2>不合格ケースの重大度</h2><span>{failed} / {assessed} 件</span></div>
+          <div className="panel-heading"><h2>不合格ケースの重大度</h2><span>{failed} / {assessed} 件 · <Link href="/safety/findings">Findings を確認 →</Link></span></div>
           <dl className="safety-severity">
             {failedBySeverity.map(({ label, color, count }) => <div key={label}>
               <dt><span style={{ backgroundColor: color }} />{label}</dt><dd>{count} 件</dd>

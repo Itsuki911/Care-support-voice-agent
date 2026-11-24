@@ -30,3 +30,9 @@
 .safety-history-breakdown dl { margin: 4px 0 0; font-size: 12px; }
 .safety-history-breakdown dl div { display: flex; justify-content: space-between; gap: 6px; }
 .safety-history-breakdown dd { margin: 0; }
+
+.safety-findings-table td:first-child { min-width: 245px; max-width: 420px; white-space: normal; }
+.safety-findings-table .safety-review > div { display: grid; justify-content: stretch; }
+.safety-findings-table [data-severity="重大"] { background: #fce8ec; color: #9a1634; }
+.safety-findings-table [data-severity="高"] { background: #ffebdc; color: #864112; }
+.safety-findings-table [data-severity="中"] { background: #fff2ce; color: #714f04; }
