@@ -1,0 +1,9 @@
+.dataset-table td { vertical-align: top; }
+.dataset-table td:first-child { min-width: 200px; white-space: normal; }
+.dataset-case summary { cursor: pointer; color: #075ac9; font-weight: 700; }
+.dataset-case small, .dataset-caption { color: #45546a; }
+.dataset-case dl { margin: 8px 0; }
+.dataset-case dl div { border-top: 1px solid #e9edf5; padding: 5px 0; }
+.dataset-case dt { font-weight: 700; }
+.dataset-case dd { margin: 3px 0 0; }
+.dataset-caption { margin-top: 10px; font-size: 12px; }
