@@ -14,10 +14,11 @@ const destinations: Record<string, { section: string; href: string } | undefined
   "トレース": { section: "traces", href: "/traces" },
   "評価モニタリング": { section: "evaluator-monitoring", href: "/evaluators/monitoring" },
   "評価結果": { section: "evaluations", href: "/evaluations" },
+  "Safety Evaluation": { section: "safety", href: "/safety" },
   "Agent設定": { section: "agent-config", href: "/config/agent" },
 };
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "agent-config" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" }) {
   return (
       <aside>
         <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>

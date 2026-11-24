@@ -1,0 +1,12 @@
+.safety-page .metrics { margin-bottom: 0; }
+.safety-page .metric { min-height: 104px; }
+.safety-page .metric-value { font-size: 24px; }
+.safety-caption { margin-top: 9px; color: #45546a; font-size: 12px; }
+.safety-severity { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0; }
+.safety-severity > div { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 9px; border: 1px solid #e3eaf5; border-radius: 7px; font-size: 13px; }
+.safety-severity dt { display: flex; gap: 6px; align-items: center; }
+.safety-severity dt span { display: inline-block; width: 9px; height: 9px; border-radius: 3px; }
+.safety-severity dd { margin: 0; font-weight: 700; }
+.safety-done { color: #076745; background: #dff5e9; }
+.safety-failed { color: #9a1634; background: #fce8ec; }
+@media (max-width: 560px) { .safety-severity { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
