@@ -3,17 +3,12 @@ import { BarChart3, CheckCircle2, CircleAlert, Clock3, Search } from "lucide-rea
 import Sidebar from "../sidebar";
 import { session } from "../sessions/demo-session";
 import { demoTraceId } from "../traces/demo-trace";
+import { runs } from "./demo-runs";
 import "../observation-list.css";
 import "./evaluations.css";
 
 export const metadata = { title: "評価結果一覧 | Voice Agent Lab" };
 
-const runs = [
-  { id: "eval_demo_004", target: session.id, kind: "セッション", trigger: "自動", version: session.evaluatorConfig, time: "2025/01/21 14:40", status: "完了", score: session.score },
-  { id: "eval_demo_003", target: demoTraceId, kind: "トレース", trigger: "手動", version: session.evaluatorConfig, time: "2025/01/21 14:35", status: "実行中", score: null },
-  { id: "eval_demo_002", target: "dataset_demo_voice_v2", kind: "データセット", trigger: "手動", version: "v4", time: "2025/01/21 10:15", status: "待機中", score: null },
-  { id: "eval_demo_001", target: "sess_demo_voice", kind: "セッション", trigger: "自動", version: "v4", time: "2025/01/20 09:22", status: "実行失敗", score: null },
-];
 const states = ["完了", "実行中", "待機中", "実行失敗"];
 const kinds = ["セッション", "トレース", "データセット"];
 const versions = [...new Set(runs.map((run) => run.version))];
@@ -55,7 +50,7 @@ export default async function EvaluationsPage({ searchParams }: { searchParams: 
           </article>)}
         </section>
         <section className="card panel">
-          <h2>検索条件</h2>
+          <div className="panel-heading"><h2>検索条件</h2><Link href="/evaluators/monitoring">評価モニタリング →</Link></div>
           <form action="/evaluations" className="observation-filters">
             <label>Run ID・対象ID<input name="q" type="search" placeholder="eval_demo_…" defaultValue={query} /></label>
             <label>状態<select name="status" defaultValue={status}><option value="">すべて</option>{states.map((value) => <option key={value}>{value}</option>)}</select></label>
