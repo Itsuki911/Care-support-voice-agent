@@ -1,10 +1,10 @@
 import Link from "next/link";
-import { AudioLines, BarChart3, Clock3, Database, FileText, House, MessageCircle, Settings, Shield, SlidersHorizontal, Tag, TrendingUp } from "lucide-react";
+import { Activity, AudioLines, BarChart3, Clock3, Database, FileText, House, MessageCircle, Settings, Shield, SlidersHorizontal, Tag, TrendingUp } from "lucide-react";
 
 const groups = [
   { label: "観測・分析", items: [[MessageCircle, "セッション"], [TrendingUp, "トレース"], [BarChart3, "評価結果"], [BarChart3, "評価モニタリング"]] },
   { label: "安全性評価", items: [[Shield, "Safety Evaluation"]] },
-  { label: "設定管理", items: [[SlidersHorizontal, "Agent設定"], [FileText, "評価設定（DeepEval）"], [Shield, "安全性設定"]] },
+  { label: "設定管理", items: [[SlidersHorizontal, "Agent設定"], [FileText, "評価設定（DeepEval）"], [Shield, "安全性設定"], [Activity, "観測設定"]] },
   { label: "データ管理", items: [[Database, "データセット"]] },
   { label: "その他", items: [[Tag, "アノテーション"], [Clock3, "実行履歴"]] },
 ] as const;
@@ -18,9 +18,10 @@ const destinations: Record<string, { section: string; href: string } | undefined
   "Agent設定": { section: "agent-config", href: "/config/agent" },
   "評価設定（DeepEval）": { section: "evaluator-config", href: "/config/evaluator" },
   "安全性設定": { section: "safety-config", href: "/config/safety" },
+  "観測設定": { section: "observability-config", href: "/config/observability" },
 };
 
-export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" }) {
+export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "evaluations" | "evaluator-monitoring" | "safety" | "agent-config" | "evaluator-config" | "safety-config" | "observability-config" }) {
   return (
       <aside>
         <div className="brand"><AudioLines size={42} /> <span>{section !== "dashboard" ? "Voice Agent Lab" : <>Voice Agent<br />Evaluation Platform</>}</span></div>
