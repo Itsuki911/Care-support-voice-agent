@@ -1,0 +1,15 @@
+.observation-list { min-width: 0; }
+.observation-list .content { display: grid; gap: 16px; }
+.observation-filters { display: flex; flex-wrap: wrap; gap: 10px; align-items: end; }
+.observation-filters label { display: grid; gap: 5px; flex: 1 1 130px; font-size: 13px; color: #354761; }
+.observation-filters label:first-child { flex-grow: 2; }
+.observation-filters input, .observation-filters select { width: 100%; min-width: 0; padding: 8px; border: 1px solid #d7deea; border-radius: 7px; background: white; color: #13223b; font: inherit; }
+.observation-filter-actions, .observation-list-pages { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; font-size: 13px; }
+.observation-filter-actions button { display: inline-flex; gap: 5px; align-items: center; color: white; border: 0; background: #075ac9; border-radius: 7px; padding: 8px 12px; cursor: pointer; }
+.observation-list a { color: #075ac9; }
+.observation-list td { padding-block: 13px; }
+.observation-list .status { display: inline-block; }
+.observation-list .status[data-evaluation="評価完了"] { background: #dff5e9; color: #076745; }
+.observation-list .status[data-evaluation="評価失敗"] { background: #fce8ec; color: #9a1634; }
+.observation-list-pages { justify-content: flex-end; margin-top: 14px; }
+.observation-list-empty { padding: 16px 0; color: #45546a; }

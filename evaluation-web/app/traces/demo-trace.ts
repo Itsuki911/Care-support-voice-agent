@@ -51,3 +51,7 @@ export function flatten(span: Span, depth = 0): { span: Span; depth: number }[] 
 }
 
 export const spans = flatten(root);
+
+const leaves = spans.filter(({ span }) => !span.children);
+export const traceCostSubtotal = leaves.reduce((total, { span }) => total + (span.cost ?? 0), 0);
+export const unmeasuredLeafCount = leaves.filter(({ span }) => span.cost === null).length;

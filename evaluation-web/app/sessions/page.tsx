@@ -4,7 +4,7 @@ import { sessions } from "../demo-data";
 import { formatUsd } from "../format-usd";
 import Sidebar from "../sidebar";
 import { demoSessionId, session } from "./demo-session";
-import "./sessions.css";
+import "../observation-list.css";
 
 export const metadata = { title: "セッション一覧 | Voice Agent Lab" };
 
@@ -46,7 +46,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: Sea
 
   return <div className="shell">
     <Sidebar section="sessions" />
-    <main className="session-list">
+    <main className="observation-list">
       <header>
         <div className="heading"><span className="home"><MessageCircle size={27} /></span><div>
           <h1>セッション一覧</h1><p>会話セッションの実行情報と評価状況</p>
@@ -57,17 +57,17 @@ export default async function SessionsPage({ searchParams }: { searchParams: Sea
       <div className="content">
         <section className="card panel">
           <h2>検索条件</h2>
-          <form action="/sessions" className="session-filters">
+          <form action="/sessions" className="observation-filters">
             <label>セッションID<input name="q" type="search" placeholder="sess_…" defaultValue={q} /></label>
             <label>モデル<select name="model" defaultValue={model}><option value="">すべて</option>{models.map((option) => <option key={option}>{option}</option>)}</select></label>
             <label>評価状態<select name="status" defaultValue={status}><option value="">すべて</option>{statuses.map((option) => <option key={option}>{option}</option>)}</select></label>
             <label>開始日時<select name="sort" defaultValue={ascending ? "oldest" : "latest"}><option value="latest">新しい順</option><option value="oldest">古い順</option></select></label>
-            <div className="session-filter-actions"><button type="submit"><Search size={16} /> 検索</button><Link href="/sessions">条件を解除</Link></div>
+            <div className="observation-filter-actions"><button type="submit"><Search size={16} /> 検索</button><Link href="/sessions">条件を解除</Link></div>
           </form>
         </section>
         <section className="card panel">
           <div className="panel-heading"><h2>検索結果</h2><span>{matching.length} 件</span></div>
-          {matching.length === 0 ? <p className="session-list-empty">一致するセッションがありません。</p> :
+          {matching.length === 0 ? <p className="observation-list-empty">一致するセッションがありません。</p> :
             <div className="table-wrap"><table aria-label="セッション検索結果">
               <thead><tr>{["セッションID", "開始日時（JST）", "LLM", "Agent設定", "評価状態", "評価スコア", "発話コスト小計（USD）"].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
               <tbody>{matching.slice((page - 1) * pageSize, page * pageSize).map((row) => {
@@ -81,7 +81,7 @@ export default async function SessionsPage({ searchParams }: { searchParams: Sea
                 </tr>;
               })}</tbody>
             </table></div>}
-          {pageCount > 1 && <nav className="session-list-pages" aria-label="検索結果のページ">
+          {pageCount > 1 && <nav className="observation-list-pages" aria-label="検索結果のページ">
             {page > 1 && <Link href={pageHref(page - 1)}>前へ</Link>}
             <span>{page} / {pageCount} ページ</span>
             {page < pageCount && <Link href={pageHref(page + 1)}>次へ</Link>}

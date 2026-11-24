@@ -9,6 +9,12 @@ const groups = [
   { label: "その他", items: [[Tag, "アノテーション"], [Clock3, "実行履歴"]] },
 ] as const;
 
+const destinations: Record<string, { section: string; href: string } | undefined> = {
+  "セッション": { section: "sessions", href: "/sessions" },
+  "トレース": { section: "traces", href: "/traces" },
+  "Agent設定": { section: "agent-config", href: "/config/agent" },
+};
+
 export default function Sidebar({ section }: { section: "dashboard" | "sessions" | "traces" | "agent-config" }) {
   return (
       <aside>
@@ -18,7 +24,12 @@ export default function Sidebar({ section }: { section: "dashboard" | "sessions"
           {groups.map(({ label, items }) => (
             <div className="nav-group" key={label}>
               <div className="nav-label">{label}</div>
-              {items.map(([Icon, name]) => name === "セッション" ? <Link key={name} className={section === "sessions" ? "current" : "nav-item"} href="/sessions" aria-current={section === "sessions" ? "page" : undefined}><Icon />{name}</Link> : name === "Agent設定" ? <Link key={name} className={section === "agent-config" ? "current" : "nav-item"} href="/config/agent" aria-current={section === "agent-config" ? "page" : undefined}><Icon />{name}</Link> : <div className={section === "traces" && name === "トレース" ? "current" : "nav-item"} key={name}><Icon />{name}</div>)}
+              {items.map(([Icon, name]) => {
+                const destination = destinations[name];
+                if (!destination) return <div className="nav-item" key={name}><Icon />{name}</div>;
+                const active = section === destination.section;
+                return <Link key={name} className={active ? "current" : "nav-item"} href={destination.href} aria-current={active ? "page" : undefined}><Icon />{name}</Link>;
+              })}
             </div>
           ))}
         </nav>

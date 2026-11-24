@@ -5,12 +5,9 @@ import { useState } from "react";
 import { ArrowLeft, Box, Check, ChevronDown, ChevronLeft, ChevronRight, Clock3, Coins, Database, Layers3, Search, Shield } from "lucide-react";
 import { formatUsd } from "../../format-usd";
 import { session } from "../../sessions/demo-session";
-import { demoTraceId, relatedSessionId, root, spans, type Span } from "../demo-trace";
+import { demoTraceId, relatedSessionId, root, spans, traceCostSubtotal, unmeasuredLeafCount, type Span } from "../demo-trace";
 
 const sections = ["概要", "入力 / 出力", "ツール呼び出し", "メタデータ", "評価・注釈"] as const;
-const ownCosts = spans.filter(({ span }) => !span.children);
-const costs = ownCosts.reduce((total, { span }) => total + (span.cost ?? 0), 0);
-const missing = ownCosts.filter(({ span }) => span.cost === null).length;
 
 function SpanDetail({ span, move, index }: { span: Span; move: (index: number) => void; index: number }) {
   const [section, setSection] = useState<(typeof sections)[number]>("概要");
@@ -66,14 +63,14 @@ export default function TraceView() {
     { icon: Clock3, label: "合計実行時間", value: `${root.duration.toFixed(2)} s` },
     { icon: Layers3, label: "スパン数", value: spans.length },
     { icon: Database, label: "トークン数（合計）", value: root.tokens?.toLocaleString("ja-JP") },
-    { icon: Coins, label: "推定コスト（小計）", value: formatUsd(costs) },
+    { icon: Coins, label: "推定コスト（小計）", value: formatUsd(traceCostSubtotal) },
     { icon: Shield, label: "安全性", value: "未実施" },
   ];
 
   return <main className="trace-main">
     <header className="trace-header">
       <div>
-        <Link href={`/sessions/${relatedSessionId}`} className="trace-back"><ArrowLeft size={16} /> セッション詳細</Link>
+        <Link href="/traces" className="trace-back"><ArrowLeft size={16} /> トレース一覧</Link>
         <div className="trace-title"><h1>Trace: {demoTraceId}</h1><span className="trace-done"><Check size={15} /> 完了</span></div>
         <p>{session.startedAt} ・ Voice Agent ・ Agent Config {session.agentConfig} ・ {session.model}</p>
       </div>
@@ -91,7 +88,7 @@ export default function TraceView() {
             <label className="trace-filter"><input type="checkbox" checked={knownCostOnly} onChange={(event) => setKnownCostOnly(event.target.checked)} /> コスト計測済み</label>
             <button type="button" disabled={searching || closed.length === 0} onClick={() => setClosed([])}>すべて展開</button>
           </div>
-          <p className="trace-help">コストは末端スパンの計測値を合算（未計測 {missing}件）。時刻は JST。</p>
+          <p className="trace-help">コストは末端スパンの計測値を合算（未計測 {unmeasuredLeafCount}件）。時刻は JST。</p>
           <div className="table-wrap"><table className="trace-table">
             <thead><tr>{["スパン / 処理", "開始時刻", "所要時間", "トークン", "コスト ($)", "状態"].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
             <tbody>{rows.map(({ span, depth }) => <tr key={span.id} className={spans[selected].span.id === span.id ? "trace-selected" : undefined}>
