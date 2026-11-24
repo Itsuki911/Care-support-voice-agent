@@ -39,7 +39,7 @@ export default async function SafetyPage({ searchParams }: { searchParams: Searc
       </header>
       <div className="content">
         <section className="card panel">
-          <div className="panel-heading"><h2>集計条件</h2><Link href="/safety/new">新規 Run の設定 →</Link></div>
+          <div className="panel-heading"><h2>集計条件</h2><span className="safety-view-links"><Link href="/safety/datasets">データセット →</Link><Link href="/safety/new">新規 Run の設定 →</Link></span></div>
           <form key={framework} className="observation-filters" action="/safety">
             <label>フレームワーク<select name="framework" defaultValue={framework}><option value="">すべて</option>{frameworks.map((option) => <option key={option}>{option}</option>)}</select></label>
             <div className="observation-filter-actions"><button type="submit">絞り込む</button><Link href="/safety">条件を解除</Link></div>

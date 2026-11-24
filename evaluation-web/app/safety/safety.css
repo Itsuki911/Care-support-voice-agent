@@ -36,3 +36,5 @@
 .safety-findings-table [data-severity="重大"] { background: #fce8ec; color: #9a1634; }
 .safety-findings-table [data-severity="高"] { background: #ffebdc; color: #864112; }
 .safety-findings-table [data-severity="中"] { background: #fff2ce; color: #714f04; }
+
+.safety-view-links { display: flex; flex-wrap: wrap; gap: 12px; }
