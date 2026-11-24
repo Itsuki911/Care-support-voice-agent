@@ -24,3 +24,9 @@
 .safety-review dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 820px) { .safety-new-grid { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 450px) { .safety-new-form { grid-template-columns: minmax(0, 1fr); } }
+
+.safety-history-subtitle { display: block; margin-top: 3px; color: #45546a; }
+.safety-history-breakdown summary { cursor: pointer; color: #075ac9; }
+.safety-history-breakdown dl { margin: 4px 0 0; font-size: 12px; }
+.safety-history-breakdown dl div { display: flex; justify-content: space-between; gap: 6px; }
+.safety-history-breakdown dd { margin: 0; }

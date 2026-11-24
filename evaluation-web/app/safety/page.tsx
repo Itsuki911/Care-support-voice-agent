@@ -61,7 +61,7 @@ export default async function SafetyPage({ searchParams }: { searchParams: Searc
           <p className="safety-caption">完了 Run に含まれるケースの件数です。同じケースを複数 Run で実施した場合は各 Run に計上します。</p>
         </section>
         <section className="card panel">
-          <h2>最近の安全性評価 Run</h2>
+          <div className="panel-heading"><h2>最近の安全性評価 Run</h2><Link href="/safety/history">実行履歴 →</Link></div>
           <div className="table-wrap"><table aria-label="最近の安全性評価 Run">
             <thead><tr>{["Run ID", "フレームワーク", "データセット", "開始日時（JST）", "状態", "合格", "不合格"].map((label) => <th key={label} scope="col">{label}</th>)}</tr></thead>
             <tbody>{runs.map(({ id, framework, dataset, started, result }) => <tr key={id}>
