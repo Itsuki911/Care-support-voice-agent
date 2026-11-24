@@ -37,3 +37,9 @@ final result: blocked
 参照は Drive の `05_agent_settings.png`。Chrome で三列の設定画面を表示し、アクティブ版からのドラフト作成、設定名の編集と保存、バージョン間の差分表示を確認しました。参照と同じ画面幅での比較は未実施です。
 
 final result: blocked
+
+## Agent LLM 設定
+
+参照は Drive の `06_agent_llm_settings.png`。Chrome で二列の表示、ドラフト作成、モデル選択、温度変更、保存後のフォームと概要の更新を確認しました。価格と比較指標は N/A で表示します。参照と同じ画面幅での比較は未実施です。
+
+final result: blocked

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { ArrowLeftRight, AudioLines, Bot, Check, Database, FileText, Layers3, Network, Plus, Rocket, RotateCcw, Save, Settings, Shield, Wrench, X } from "lucide-react";
+import LlmEditor from "./llm-editor";
+import { numericFields, validateLlm, type LlmSettings, type NumericKey } from "./llm-settings";
 import { active, basics, versions, type AgentBasics } from "./demo-settings";
 
 const categories = [
@@ -32,10 +34,13 @@ export default function AgentSettings() {
   const choices = savedDraft ? [...versions, { ...savedDraft, id: "draft" }] : versions;
   const from = choices.find(({ id }) => id === source) ?? active;
   const to = choices.find(({ id }) => id === target) ?? active;
+  const llmLabels = { provider: "プロバイダー", model: "モデル", streaming: "ストリーミング", responseFormat: "レスポンス形式" } as const;
   const differences = [
     ["設定名", from.name, to.name],
     ["説明", from.description, to.description],
     ["タグ", from.tags.join("、"), to.tags.join("、")],
+    ...Object.entries(llmLabels).map(([key, label]) => [label, String(from.llm[key as keyof typeof llmLabels]), String(to.llm[key as keyof typeof llmLabels])]),
+    ...Object.entries(numericFields).map(([key, { label }]) => [label, from.llm[key as NumericKey], to.llm[key as NumericKey]]),
   ].filter(([, before, after]) => before !== after);
 
   useEffect(() => {
@@ -48,9 +53,9 @@ export default function AgentSettings() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [dirty]);
 
-  function edit() {
+  function edit(section = "基本設定") {
     setTab("設定");
-    setCategory("基本設定");
+    setCategory(section);
     setDraft((current) => current ?? savedDraft ?? basics(active));
     setMessage("");
   }
@@ -68,14 +73,18 @@ export default function AgentSettings() {
     setTag("");
   }
 
-  function save(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  function save() {
     if (!draft || !draft.name.trim()) {
       setMessage("設定名を入力してください。");
       return;
     }
     if (tag.trim()) {
       setMessage("入力したタグを追加するか、タグ欄を空にしてください。");
+      return;
+    }
+    const llmError = validateLlm(draft.llm);
+    if (llmError) {
+      setMessage(llmError);
       return;
     }
     setSavedDraft({ ...draft, name: draft.name.trim() });
@@ -87,6 +96,11 @@ export default function AgentSettings() {
     <strong>{id} {id === active.id && <span className="agent-active">アクティブ</span>}</strong>
     <time>{date} JST</time><span>{author}</span>
   </li>)}</ul>;
+
+  if (tab === "設定" && category === "LLM") {
+    return <LlmEditor value={value.llm} version={draft || savedDraft ? "ドラフト" : active.id} editing={draft !== undefined} message={message}
+      onEdit={() => edit("LLM")} onSave={save} onChange={(llm: LlmSettings) => update({ llm })} onBasic={() => setCategory("基本設定")} />;
+  }
 
   return <main className="agent-main">
     <header className="agent-header">
@@ -105,7 +119,7 @@ export default function AgentSettings() {
           <strong className="agent-version">{active.id}</strong>
           <p>Development に適用中</p>
           <dl className="agent-version-meta"><dt>最終更新</dt><dd>{active.date} JST</dd><dt>更新者</dt><dd>{active.author}</dd></dl>
-          <button className="agent-button agent-full" type="button" onClick={edit}><Plus size={17} /> {savedDraft ? "ドラフトを編集" : "新しいドラフトを作成"}</button>
+          <button className="agent-button agent-full" type="button" onClick={() => edit()}><Plus size={17} /> {savedDraft ? "ドラフトを編集" : "新しいドラフトを作成"}</button>
         </section>
         <nav className="card agent-card agent-categories" aria-label="設定カテゴリ">
           {[{ title: "基本設定", icon: Settings }, ...categories].map(({ title, icon: Icon }) =>
@@ -117,9 +131,9 @@ export default function AgentSettings() {
       <div className="agent-stack">
         {tab === "設定" && !selected && <section className="card agent-card agent-editor">
           <div className="agent-card-head"><div><h2>基本設定</h2><p>Agentの名前、説明、タグを管理します。</p></div>
-            {!draft && <button className="agent-button" type="button" onClick={edit}>{savedDraft ? "ドラフトを編集" : "アクティブ版から編集"}</button>}
+            {!draft && <button className="agent-button" type="button" onClick={() => edit()}>{savedDraft ? "ドラフトを編集" : "アクティブ版から編集"}</button>}
           </div>
-          <form onSubmit={save}>
+          <form onSubmit={(event) => { event.preventDefault(); save(); }}>
             <div className="agent-fields">
               <label htmlFor="agent-name">設定名 <span aria-hidden="true">*</span></label>
               <input id="agent-name" required maxLength={100} readOnly={!draft} value={value.name} onChange={(event) => update({ name: event.target.value })} />
@@ -134,7 +148,7 @@ export default function AgentSettings() {
             <div className="agent-structure">
               <h2>主要な構成（サマリー）</h2>
               <div className="agent-summary">{categories.map(({ title, icon: Icon, lines }) => <button key={title} type="button" onClick={() => setCategory(title)}>
-                <span className="icon blue"><Icon size={22} /></span><span><strong>{title}</strong>{lines.map((line) => <span key={line}>{line}</span>)}</span>
+                <span className="icon blue"><Icon size={22} /></span><span><strong>{title}</strong>{(title === "LLM" ? [value.llm.model, `Temperature ${value.llm.temperature} / 最大 ${Number(value.llm.maxTokens).toLocaleString("ja-JP")}トークン`] : lines).map((line) => <span key={line}>{line}</span>)}</span>
               </button>)}</div>
             </div>
             <div className="agent-actions">
@@ -152,7 +166,7 @@ export default function AgentSettings() {
         </section>}
         {tab === "バージョン履歴" && <section className="card agent-card"><h2>バージョン履歴</h2>{history}</section>}
         {tab === "比較" && <section className="card agent-card"><h2>設定の差分</h2><p>{source} → {target}</p>
-          {differences.length === 0 ? <p>基本設定に差分はありません。</p> : <dl className="agent-diff">
+          {differences.length === 0 ? <p>設定に差分はありません。</p> : <dl className="agent-diff">
             {differences.map(([label, before, after]) => <div key={label}><dt>{label}</dt><dd><del>{before || "（空）"}</del><ins>{after || "（空）"}</ins></dd></div>)}
           </dl>}
         </section>}
