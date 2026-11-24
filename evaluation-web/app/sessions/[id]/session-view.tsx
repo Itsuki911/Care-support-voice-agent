@@ -93,7 +93,7 @@ export default function SessionView() {
   return (
     <main className="session-main">
       <header className="session-header">
-        <Link href="/" className="session-back"><ArrowLeft size={16} /> ダッシュボード</Link>
+        <Link href="/sessions" className="session-back"><ArrowLeft size={16} /> セッション一覧</Link>
         <div className="session-title">
           <span className="icon purple"><Shield size={26} /></span>
           <div>

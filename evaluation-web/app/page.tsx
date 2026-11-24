@@ -93,7 +93,7 @@ export default function Dashboard() {
               </div>
             </section>}
             {(overview || tab === "最近の変更") && <section className="card panel">
-              <h2>最近のセッション</h2>
+              <div className="panel-heading"><h2>最近のセッション</h2><Link href="/sessions">すべて見る →</Link></div>
               <div className="table-wrap"><table><thead><tr>
                 {["セッションID", "日時（JST）", "LLM", "評価スコア", "安全性"].map((label) => <th key={label} scope="col">{label}</th>)}
               </tr></thead><tbody>{sessions.map(({ id, time, model, score }) => <tr key={id}>

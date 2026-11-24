@@ -18,7 +18,7 @@ export default function Sidebar({ section }: { section: "dashboard" | "sessions"
           {groups.map(({ label, items }) => (
             <div className="nav-group" key={label}>
               <div className="nav-label">{label}</div>
-              {items.map(([Icon, name]) => name === "Agent設定" ? <Link key={name} className={section === "agent-config" ? "current" : "nav-item"} href="/config/agent" aria-current={section === "agent-config" ? "page" : undefined}><Icon />{name}</Link> : <div className={section === "sessions" && name === "セッション" || section === "traces" && name === "トレース" ? "current" : "nav-item"} key={name}><Icon />{name}</div>)}
+              {items.map(([Icon, name]) => name === "セッション" ? <Link key={name} className={section === "sessions" ? "current" : "nav-item"} href="/sessions" aria-current={section === "sessions" ? "page" : undefined}><Icon />{name}</Link> : name === "Agent設定" ? <Link key={name} className={section === "agent-config" ? "current" : "nav-item"} href="/config/agent" aria-current={section === "agent-config" ? "page" : undefined}><Icon />{name}</Link> : <div className={section === "traces" && name === "トレース" ? "current" : "nav-item"} key={name}><Icon />{name}</div>)}
             </div>
           ))}
         </nav>
