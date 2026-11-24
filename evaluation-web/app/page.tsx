@@ -1,23 +1,18 @@
 "use client";
 
+import Link from "next/link";
+import Sidebar from "./sidebar";
+import { demoSessionId } from "./sessions/demo-session";
 import { useState } from "react";
 import {
-  AudioLines, BarChart3, CalendarDays, Clock3, Database, FileText, House,
-  MessageCircle, Play, Settings, Shield, SlidersHorizontal, Tag, TrendingUp,
+  BarChart3, CalendarDays, Database, FileText, House,
+  MessageCircle, Play, Shield, SlidersHorizontal,
 } from "lucide-react";
 import {
   Area, AreaChart, CartesianGrid, Legend, Pie, PieChart, ResponsiveContainer,
   Tooltip, XAxis, YAxis,
 } from "recharts";
 import { findings, sessions, trend } from "./demo-data";
-
-const groups = [
-  { label: "観測・分析", items: [[MessageCircle, "セッション"], [TrendingUp, "トレース"], [BarChart3, "評価結果"]] },
-  { label: "安全性評価", items: [[Shield, "Safety Evaluation"]] },
-  { label: "設定管理", items: [[SlidersHorizontal, "Agent設定"], [FileText, "評価設定（DeepEval）"], [Shield, "安全性設定"]] },
-  { label: "データ管理", items: [[Database, "データセット"]] },
-  { label: "その他", items: [[Tag, "アノテーション"], [Clock3, "実行履歴"]] },
-] as const;
 
 const metrics = [
   { icon: MessageCircle, label: "セッション数", value: "1,248", change: "+12.4%", color: "blue" },
@@ -41,19 +36,7 @@ export default function Dashboard() {
 
   return (
     <div className="shell">
-      <aside>
-        <div className="brand"><AudioLines size={42} /> <span>Voice Agent<br />Evaluation Platform</span></div>
-        <nav aria-label="管理画面">
-          <a className="current" href="/" aria-current="page"><House /> ダッシュボード</a>
-          {groups.map(({ label, items }) => (
-            <div className="nav-group" key={label}>
-              <div className="nav-label">{label}</div>
-              {items.map(([Icon, name]) => <div className="nav-item" key={name}><Icon />{name}</div>)}
-            </div>
-          ))}
-        </nav>
-        <div className="nav-footer"><Settings size={20} /> 設定</div>
-      </aside>
+      <Sidebar section="dashboard" />
       <main>
         <header>
           <div className="heading"><div className="home"><House size={30} /></div><div>
@@ -114,7 +97,7 @@ export default function Dashboard() {
               <div className="table-wrap"><table><thead><tr>
                 {["セッションID", "日時（JST）", "LLM", "評価スコア", "安全性"].map((label) => <th key={label} scope="col">{label}</th>)}
               </tr></thead><tbody>{sessions.map(({ id, time, model, score }) => <tr key={id}>
-                <td>{id}</td><td>2025/01/21 {time}</td><td>{model}</td><td>{score.toFixed(2)}</td><td><span className="status">未実施</span></td>
+                <td>{id === demoSessionId ? <Link href={`/sessions/${encodeURIComponent(id)}`}>{id}</Link> : id}</td><td>2025/01/21 {time}</td><td>{model}</td><td>{score.toFixed(2)}</td><td><span className="status">未実施</span></td>
               </tr>)}</tbody></table></div>
             </section>}
             {overview && <section className="card panel">
