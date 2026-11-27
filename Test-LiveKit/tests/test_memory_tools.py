@@ -233,6 +233,41 @@ def test_agent_entrypoint_injects_recent_memories_and_commits_only_on_end_sessio
         await callbacks2[0]()
         assert enqueued == []
 
+        # 各回答後の抽出では未送信分だけを投入し、終了時に重複させない。
+        monkeypatch.setattr(agent, "load_runtime_config", lambda: {"memory": {"extraction_frequency": "every_response"}})
+        room3 = FakeRoom("frontend-test-text-mem3", "hanako-01")
+        callbacks3 = []
+        ctx3 = SimpleNamespace(room=room3, add_shutdown_callback=callbacks3.append, is_fake_job=lambda: False)
+        await agent.entrypoint(ctx3)
+        handler = created_sessions[-1].handlers["conversation_item_added"]
+        for role, content, item_id in [("user", "朝はヨガをします", "u3"), ("assistant", "いいですね", "a3"), ("user", "夕方は散歩します", "u4"), ("assistant", "素敵です", "a4")]:
+            handler(SimpleNamespace(item=SimpleNamespace(role=role, text_content=content, id=item_id, interrupted=False), created_at=4.0))
+        assert len(enqueued) == 2
+        assert [[m.content for m in batch] for _, _, batch in enqueued] == [["朝はヨガをします", "いいですね"], ["夕方は散歩します", "素敵です"]]
+        room3.events["data_received"](SimpleNamespace(data=b'{"type":"end_session"}'))
+        await callbacks3[0]()
+        assert len(enqueued) == 2
+
+        # キューが満杯の場合は未送信分を次の回答で再投入する。
+        enqueued.clear()
+        attempts = iter([False, True])
+        def enqueue_with_retry(uid, sid, messages):
+            success = next(attempts)
+            if success:
+                enqueued.append((uid, sid, messages))
+            return success
+        fake_worker.enqueue_conversation.side_effect = enqueue_with_retry
+        room4 = FakeRoom("frontend-test-text-mem4", "hanako-01")
+        callbacks4 = []
+        await agent.entrypoint(SimpleNamespace(room=room4, add_shutdown_callback=callbacks4.append, is_fake_job=lambda: False))
+        handler = created_sessions[-1].handlers["conversation_item_added"]
+        for role, content, item_id in [("user", "first", "u5"), ("assistant", "one", "a5"), ("user", "second", "u6"), ("assistant", "two", "a6")]:
+            handler(SimpleNamespace(item=SimpleNamespace(role=role, text_content=content, id=item_id, interrupted=False), created_at=5.0))
+        assert len(enqueued) == 1
+        assert [m.content for m in enqueued[0][2]] == ["first", "one", "second", "two"]
+        await callbacks4[0]()
+        assert len(enqueued) == 1
+
     asyncio.run(scenario())
 
 

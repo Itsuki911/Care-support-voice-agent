@@ -156,6 +156,35 @@ class TerminalAssistant(Agent):
         )
 
 
+def _create_openrouter_llm(model: str, prompt_version: str, llm_config: dict):
+    """Map persisted settings to the installed LiveKit OpenRouter plugin."""
+    options = {"model": model}
+    if llm_config.get("temperature") is not None:
+        options["temperature"] = llm_config["temperature"]
+    caching = llm_config.get("prompt_caching", True)
+    if caching:
+        options["prompt_cache_key"] = f"care-support:{prompt_version}"
+    instance = openai.LLM.with_openrouter(**options)
+    opts = getattr(instance, "_opts", None)
+    extra_body = getattr(opts, "extra_body", None)
+    effort = llm_config.get("reasoning_effort", "auto")
+    max_tokens = llm_config.get("max_tokens")
+    if effort != "auto" or max_tokens is not None:
+        if not isinstance(extra_body, dict):
+            raise RuntimeError("OpenRouter request options are unavailable")
+        if effort != "auto":
+            extra_body["reasoning"] = {"effort": effort}
+        if max_tokens is not None:
+            extra_body["max_tokens"] = max_tokens
+    if caching and model.startswith("anthropic/") and isinstance(extra_body, dict):
+        extra_body.setdefault("cache_control", {"type": "ephemeral"})
+    if not caching:
+        if opts is None or not hasattr(opts, "prompt_cache_breakpoints"):
+            raise RuntimeError("Prompt cache options are unavailable")
+        opts.prompt_cache_breakpoints = False
+    return instance
+
+
 def _init_memory_runtime(tracer: MemoryTracer | None = None, *, enabled: bool | None = None) -> MemoryRuntime | None:
     """Create MemoryRuntime when DATABASE_URL is configured; degrade gracefully otherwise."""
     if enabled is False or (enabled is None and os.getenv("MEMORY_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}):
@@ -186,12 +215,15 @@ def _init_rag_runtime(
     try:
         rag_settings = RAGSettings.from_env()
         if settings_override:
-            rag_settings = replace(rag_settings, **{ {"top_k": "default_top_k"}.get(k, k): v for k, v in settings_override.items() })
+            active_keys = {"top_k", "similarity_threshold", "chunk_size", "chunk_overlap", "embedding_model"}
+            rag_settings = replace(rag_settings, **{{"top_k": "default_top_k"}.get(k, k): v for k, v in settings_override.items() if k in active_keys})
         return create_rag_runtime(
             rag_settings,
             db=memory_runtime.db if memory_runtime is not None else None,
             embedding_provider=(
-                memory_runtime.embedding_provider if memory_runtime is not None else None
+                memory_runtime.embedding_provider
+                if memory_runtime is not None and memory_runtime.embedding_provider.model_name == rag_settings.embedding_model
+                else None
             ),
             tracer=tracer,
         )
@@ -337,6 +369,9 @@ async def entrypoint(ctx: JobContext) -> None:
                     return
         confirmed_turns.append(entry)
     memory_committed = False
+    memory_submitted_count = 0
+    memory_has_queued = False
+    extraction_frequency = runtime_config.get("memory", {}).get("extraction_frequency", "session_end")
 
     def get_memory_user_id() -> str:
         resolved = _resolve_participant_user_id(ctx.room)
@@ -371,32 +406,31 @@ async def entrypoint(ctx: JobContext) -> None:
                 recent = []
         return prompt.text + format_recent_memories_for_prompt(recent, max_items=recent_limit)
 
-    def submit_conversation_to_memory(trigger: str) -> bool:
-        nonlocal memory_committed
-        if memory_committed or memory_runtime is None or not recorded_messages:
+    def submit_conversation_to_memory(trigger: str, *, final: bool = True) -> bool:
+        nonlocal memory_committed, memory_submitted_count, memory_has_queued
+        if memory_committed or memory_runtime is None:
             return False
-        memory_committed = True
+        pending = recorded_messages[memory_submitted_count:]
+        if not pending:
+            if final:
+                memory_committed = True
+            return memory_has_queued if final else False
         uid = get_memory_user_id()
-        batch = [
-            m.model_copy(update={"user_id": uid, "session_id": session_id})
-            for m in recorded_messages
-        ]
+        batch = [m.model_copy(update={"user_id": uid, "session_id": session_id}) for m in pending]
         with memory_tracer.span(
-            "memory.end_session",
-            trigger=trigger,
-            user_id=uid,
-            session_id=session_id,
-            message_count=len(batch),
+            "memory.end_session" if final else "memory.incremental_extraction",
+            trigger=trigger, user_id=uid, session_id=session_id, message_count=len(batch),
         ) as span:
             queued = memory_runtime.worker.enqueue_conversation(uid, session_id, batch)
             span.set(queued=queued)
+        if queued:
+            memory_submitted_count += len(pending)
+            memory_has_queued = True
+            if final:
+                memory_committed = True
         logger.info(
             "Memory ingestion triggered (%s): user_id=%s session_id=%s messages=%d queued=%s",
-            trigger,
-            uid,
-            session_id,
-            len(batch),
-            queued,
+            trigger, uid, session_id, len(batch), queued,
         )
         return queued
 
@@ -410,19 +444,8 @@ async def entrypoint(ctx: JobContext) -> None:
         except Exception:
             logger.debug("Failed to publish data payload to room", exc_info=True)
 
-    # OpenRouter は OpenAI 互換の Chat Completions API を提供している。
-    # LiveKit の OpenAI プラグイン経由で接続するため、API キーは
-    # OPENROUTER_API_KEY、モデル名は OPENROUTER_MODEL で切り替えられる。
-    # prompt_cache_key を指定し、OpenAI (gpt-5.6+) では prompt_cache_breakpoints='auto' を活用する。
-    llm_instance = openai.LLM.with_openrouter(
-        model=settings.openrouter_model,
-        prompt_cache_key=f"care-support:{prompt.version}",
-    )
-    if settings.openrouter_model.startswith("anthropic/"):
-        opts = getattr(llm_instance, "_opts", None)
-        extra_body = getattr(opts, "extra_body", None)
-        if isinstance(extra_body, dict):
-            extra_body.setdefault("cache_control", {"type": "ephemeral"})
+    # OpenRouter の追加パラメータは各セッション開始時の設定から構築する。
+    llm_instance = _create_openrouter_llm(settings.openrouter_model, prompt.version, runtime_config.get("llm", {}))
     session_options = {
         "llm": llm_instance,
     }
@@ -600,20 +623,17 @@ async def entrypoint(ctx: JobContext) -> None:
                 if callable(drain_fn):
                     await drain_fn(timeout_seconds=22.0)
                 completed = getattr(memory_runtime.worker, "completed_results", None) or []
-                latest = next(
-                    (r for r in reversed(completed) if getattr(r, "session_id", None) == session_id),
-                    None,
-                )
-                errors = list(getattr(latest, "errors", []) or []) if latest is not None else []
+                results = [r for r in completed if getattr(r, "session_id", None) == session_id]
+                errors = [error for result in results for error in (getattr(result, "errors", []) or [])]
                 await publish_json_data(
                     {
                         "type": "memory_saved",
                         "session_id": room_name,
                         "status": "error" if errors else "saved",
-                        "saved_messages": int(getattr(latest, "saved_messages", 0) or 0) if latest else 0,
-                        "added_count": len(getattr(latest, "added_ids", []) or []) if latest else 0,
-                        "updated_count": len(getattr(latest, "updated_ids", []) or []) if latest else 0,
-                        "deleted_count": len(getattr(latest, "deleted_ids", []) or []) if latest else 0,
+                        "saved_messages": sum(int(getattr(result, "saved_messages", 0) or 0) for result in results),
+                        "added_count": sum(len(getattr(result, "added_ids", []) or []) for result in results),
+                        "updated_count": sum(len(getattr(result, "updated_ids", []) or []) for result in results),
+                        "deleted_count": sum(len(getattr(result, "deleted_ids", []) or []) for result in results),
                     }
                 )
             except Exception:
@@ -696,6 +716,9 @@ async def entrypoint(ctx: JobContext) -> None:
                     content=text.strip(),
                 )
             )
+        if (role == "assistant" and text.strip() and extraction_frequency == "every_response"
+                and any(message.role == "user" for message in recorded_messages[memory_submitted_count:])):
+            submit_conversation_to_memory("assistant_response", final=False)
         payload = transcript_tracker.on_conversation_item_added(
             role=role,
             text=text,
@@ -773,6 +796,8 @@ async def entrypoint(ctx: JobContext) -> None:
                         logger.warning("Failed to close RAG runtime cleanly", exc_info=True)
                 if memory_runtime is not None:
                     try:
+                        if extraction_frequency == "every_response":
+                            submit_conversation_to_memory("session_close")
                         await memory_runtime.close()
                     except Exception:
                         logger.warning("Failed to close memory runtime cleanly", exc_info=True)

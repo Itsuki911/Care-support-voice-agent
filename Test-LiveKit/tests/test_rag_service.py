@@ -278,3 +278,38 @@ def test_livekit_adapter_and_untrusted_prompt_guard(tmp_path: Path):
         assert err_out["count"] == 0
 
     asyncio.run(scenario())
+
+
+def test_tool_uses_configured_retrieval_defaults_when_not_overridden():
+    async def scenario():
+        from unittest.mock import AsyncMock
+        from rag.models.rag import SearchResponse
+
+        service = _build_service()[0]
+        service.search = AsyncMock(return_value=SearchResponse(query="query", results=[]))
+        tools = RAGTools(service, corpus_id="kb")
+        assert (await tools.search_documents(query="query"))["ok"] is True
+        assert service.search.call_args.kwargs == {"corpus_id": "kb", "top_k": None, "min_similarity": None}
+        await tools.search_documents(query="query", top_k=25)
+        assert service.search.call_args.kwargs["top_k"] == 25
+        await tools.search_documents(query="query", top_k=100)
+        assert service.search.call_args.kwargs["top_k"] == 50
+
+    asyncio.run(scenario())
+
+
+def test_tool_forwards_runtime_defaults_through_retriever_to_repository():
+    async def scenario():
+        from unittest.mock import AsyncMock
+
+        service, repo = _build_service()
+        service._retriever._default_top_k = 7
+        service._retriever._default_min_similarity = 0.75
+        repo.search_similar = AsyncMock(return_value=[])
+        tools = RAGTools(service, corpus_id="kb")
+        result = await tools.search_documents(query="query")
+        assert result["ok"] is True
+        assert repo.search_similar.call_args.kwargs["top_k"] == 7
+        assert repo.search_similar.call_args.kwargs["min_similarity"] == 0.75
+
+    asyncio.run(scenario())

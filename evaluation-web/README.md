@@ -49,7 +49,11 @@ npm run typecheck
 
 ## Agent 設定
 
-`/config/agent` で OpenRouter の4モデル選択、通常セッションのシステムプロンプト編集、ツールの有効・無効、RAG パラメーター、メモリの件数と操作履歴、メモリ/RAG の利用設定を確認できます。保存内容は `Test-LiveKit/.agent-runtime-config.json` に保存され、次のセッションから読み込まれます。このファイルは Git 管理外です。既存のメール等の承認フローは変更しません。秘書モードは専用プロンプトを使用します。チャンクサイズと重なりは新規取り込みに適用され、既存文書には再取り込みが必要です。
+`/config/agent` で OpenRouter の4モデルと temperature・reasoning_effort・max_tokens・prompt_caching の選択、通常セッションのシステムプロンプト編集、ツールの有効・無効、RAG パラメーター、メモリの件数と操作履歴・extraction_frequency、メモリ/RAG の利用設定を確認できます。保存内容は `Test-LiveKit/.agent-runtime-config.json` に保存され、次のセッションから読み込まれます。このファイルは Git 管理外です。既存のメール等の承認フローは変更しません。秘書モードは専用プロンプトを使用します。チャンクサイズと重なりは新規取り込みに適用され、既存文書には再取り込みが必要です。RAG の embedding_model は Ollama の 768 次元互換モデルを指定し、変更時には文書の再取り込みが必要です。metadata_filter、rerank_top_n、max_iterations、max_steps、max_execution_time、early_stopping_method は将来用として保存のみ行い、現在の RAG 動作には適用しません。画面に示す初期値は仮値です。通常の文書検索では、top_k はツールが明示指定しない場合の既定値、similarity_threshold は検索の下限値として使用します。
+
+temperature と max_tokens の空欄、reasoning_effort の auto はプロバイダー既定値を使います。reasoning_effort と max_tokens は OpenRouter の追加リクエスト項目として指定し、モデルごとの対応に依存します。prompt_caching の無効化はアプリ側のキャッシュ指定を停止しますが、プロバイダーによる自動キャッシュを保証して停止するものではありません。
+
+メモリの extraction_frequency は session_end（会話終了ボタン時、一括抽出）または every_response（各回答後、未処理分をバックグラウンド抽出）から選択できます。既定値は session_end です。変更は次のセッションから有効です。
 
 LLM の比較は Langfuse の直近365日の `llm_request` と紐づく DeepEval スコアを集計します。条件や件数が異なるため厳密な比較実験ではありません。メモリ画面は PostgreSQL のテーブル件数と直近の操作種別・日時のみを読み取ります。DB に接続できない場合はその旨を表示します。音声モデルと音声の設定もハーネス画面で変更できます。認証情報は環境変数で管理します。Agent 設定の編集機能にはアプリ独自のユーザー認証がないため、ローカル環境で使用してください。起動コマンドは localhost に限定しています。
 

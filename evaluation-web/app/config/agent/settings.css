@@ -116,3 +116,6 @@
 .agent-live-form button { justify-self: start; }
 .agent-tool { display: flex; align-items: center; gap: 8px; }
 .agent-tool small { color: #66758a; }
+
+.rag-future { display: grid; gap: 12px; border: 1px solid #d7deea; border-radius: 8px; padding: 12px; min-width: 0; }
+.rag-future legend { font-weight: 700; }
