@@ -1,199 +1,39 @@
 "use client";
 
-import Link from "next/link";
-import { useEffect, useState } from "react";
-import { ArrowLeftRight, AudioLines, Bot, Check, Database, FileText, Layers3, Network, Plus, Rocket, RotateCcw, Save, Settings, Shield, Wrench, X } from "lucide-react";
-import LlmEditor from "./llm-editor";
-import { numericFields, validateLlm, type LlmSettings, type NumericKey } from "./llm-settings";
-import { active, basics, versions, type AgentBasics } from "./demo-settings";
+import { useState } from "react";
+import { Bot } from "lucide-react";
+import { saveSettings } from "./actions";
+import type { Config, ModelComparison } from "./runtime-data";
 
-const categories = [
-  { title: "LLM", icon: Layers3, lines: ["gpt-4o", "Temperature 0.3 / 最大 4,096トークン"] },
-  { title: "音声（STT / TTS）", icon: AudioLines, lines: ["STT: whisper-1", "TTS: gpt-4o-mini-tts"] },
-  { title: "プロンプト", icon: FileText, lines: ["v12", "施設の受付時間と見学予約を案内します。"] },
-  { title: "ツール", icon: Wrench, lines: ["3 / 4 有効", "外部操作には承認が必要"] },
-  { title: "RAG", icon: Database, lines: ["施設案内 FAQ v3", "top-k: 5"] },
-  { title: "メモリ", icon: Database, lines: ["ユーザー要約・利用履歴", "保持期間: 180日"] },
-  { title: "ハーネス", icon: Network, lines: ["承認制御・安全制約・リトライ"] },
-  { title: "安全ポリシー", icon: Shield, lines: ["基本ガードレール有効"] },
-] as const;
+const modelOptions = ["anthropic/claude-haiku-5.5", "openai/gpt-6-luna", "deepseek/deepseek-v4.1-flash-1017", "qwen/qwen3.8-flash"];
+const toolLabels: Record<string, string> = { search_emails: "メール検索", read_email: "メール本文の取得", send_email: "メール送信", search_memories: "メモリ検索", list_recent_memories: "最近のメモリ取得", save_memory: "メモリ保存", search_documents: "文書検索", search_web: "Web 検索", get_schedule: "予定取得（秘書）", get_tasks: "タスク取得（秘書）" };
+type Memory = { counts: Record<string, number>; history: { action: string; created_at: string }[] } | null;
+type Props = { settings: Config; comparisons: ModelComparison[] | null; memory: Memory };
+const sections = ["LLM", "プロンプト", "ツール", "RAG", "メモリ", "ハーネス"];
 
-const tabs = ["設定", "バージョン履歴", "比較", "実験（A/Bテスト）"] as const;
-
-export default function AgentSettings() {
-  const [tab, setTab] = useState<(typeof tabs)[number]>("設定");
-  const [category, setCategory] = useState<string>("基本設定");
-  const [savedDraft, setSavedDraft] = useState<AgentBasics>();
-  const [draft, setDraft] = useState<AgentBasics>();
-  const [tag, setTag] = useState("");
+export default function AgentSettings({ settings, comparisons, memory }: Props) {
+  const [section, setSection] = useState("LLM");
   const [message, setMessage] = useState("");
-  const [source, setSource] = useState(versions[1].id);
-  const [target, setTarget] = useState(active.id);
-  const value = draft ?? savedDraft ?? active;
-  const dirty = draft !== undefined && JSON.stringify(draft) !== JSON.stringify(savedDraft ?? basics(active));
-  const selected = categories.find(({ title }) => title === category);
-  const choices = savedDraft ? [...versions, { ...savedDraft, id: "draft" }] : versions;
-  const from = choices.find(({ id }) => id === source) ?? active;
-  const to = choices.find(({ id }) => id === target) ?? active;
-  const llmLabels = { provider: "プロバイダー", model: "モデル", streaming: "ストリーミング", responseFormat: "レスポンス形式" } as const;
-  const differences = [
-    ["設定名", from.name, to.name],
-    ["説明", from.description, to.description],
-    ["タグ", from.tags.join("、"), to.tags.join("、")],
-    ...Object.entries(llmLabels).map(([key, label]) => [label, String(from.llm[key as keyof typeof llmLabels]), String(to.llm[key as keyof typeof llmLabels])]),
-    ...Object.entries(numericFields).map(([key, { label }]) => [label, from.llm[key as NumericKey], to.llm[key as NumericKey]]),
-  ].filter(([, before, after]) => before !== after);
-
-  useEffect(() => {
-    if (!dirty) return;
-    function warn(event: BeforeUnloadEvent) {
-      event.preventDefault();
-      event.returnValue = true;
-    }
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [dirty]);
-
-  function edit(section = "基本設定") {
-    setTab("設定");
-    setCategory(section);
-    setDraft((current) => current ?? savedDraft ?? basics(active));
+  const [pending, setPending] = useState(false);
+  async function submit(form: FormData) {
     setMessage("");
+    setPending(true);
+    try { await saveSettings(form); setMessage("保存しました。新しいセッションから反映されます。"); }
+    catch { setMessage("保存できませんでした。入力値とサーバーの状態を確認してください。"); }
+    finally { setPending(false); }
   }
-
-  function update(changes: Partial<AgentBasics>) {
-    if (!draft) return;
-    setDraft({ ...draft, ...changes });
-    setMessage("");
-  }
-
-  function addTag() {
-    const next = tag.trim();
-    if (!draft || !next || draft.tags.includes(next)) return;
-    update({ tags: [...draft.tags, next] });
-    setTag("");
-  }
-
-  function save() {
-    if (!draft || !draft.name.trim()) {
-      setMessage("設定名を入力してください。");
-      return;
-    }
-    if (tag.trim()) {
-      setMessage("入力したタグを追加するか、タグ欄を空にしてください。");
-      return;
-    }
-    const llmError = validateLlm(draft.llm);
-    if (llmError) {
-      setMessage(llmError);
-      return;
-    }
-    setSavedDraft({ ...draft, name: draft.name.trim() });
-    setDraft(undefined);
-    setMessage("この画面にドラフトを保存しました。");
-  }
-
-  const history = <ul className="agent-history">{versions.map(({ id, date, author }) => <li key={id} className={id === active.id ? "agent-history-active" : undefined}>
-    <strong>{id} {id === active.id && <span className="agent-active">アクティブ</span>}</strong>
-    <time>{date} JST</time><span>{author}</span>
-  </li>)}</ul>;
-
-  if (tab === "設定" && category === "LLM") {
-    return <LlmEditor value={value.llm} version={draft || savedDraft ? "ドラフト" : active.id} editing={draft !== undefined} message={message}
-      onEdit={() => edit("LLM")} onSave={save} onChange={(llm: LlmSettings) => update({ llm })} onBasic={() => setCategory("基本設定")} />;
-  }
-
+  const button = <button className="agent-button agent-primary" type="submit" disabled={pending}>{pending ? "保存中…" : "保存"}</button>;
   return <main className="agent-main">
-    <header className="agent-header">
-      <div className="heading"><div className="home"><Bot size={29} /></div><div>
-        <h1>Agent設定</h1><p>音声Agentの基本情報と構成を管理します。</p>
-      </div></div>
-      <div className="environment">環境 <strong>Development</strong><span>モックデータ</span></div>
-    </header>
-    <nav className="agent-tabs" aria-label="Agent設定の表示項目">{tabs.map((label) =>
-      <button type="button" key={label} aria-pressed={tab === label} onClick={() => setTab(label)}>{label}</button>
-    )}</nav>
-    <div className="agent-grid">
-      <div className="agent-stack">
-        <section className="card agent-card">
-          <div className="agent-card-head"><h2>設定バージョン</h2><span className="agent-active">アクティブ</span></div>
-          <strong className="agent-version">{active.id}</strong>
-          <p>Development に適用中</p>
-          <dl className="agent-version-meta"><dt>最終更新</dt><dd>{active.date} JST</dd><dt>更新者</dt><dd>{active.author}</dd></dl>
-          <button className="agent-button agent-full" type="button" onClick={() => edit()}><Plus size={17} /> {savedDraft ? "ドラフトを編集" : "新しいドラフトを作成"}</button>
-        </section>
-        <nav className="card agent-card agent-categories" aria-label="設定カテゴリ">
-          {[{ title: "基本設定", icon: Settings }, ...categories].map(({ title, icon: Icon }) =>
-            <button key={title} type="button" aria-pressed={tab === "設定" && category === title} onClick={() => { setTab("設定"); setCategory(title); }}><Icon size={19} />{title}</button>
-          )}
-        </nav>
-      </div>
-
-      <div className="agent-stack">
-        {tab === "設定" && !selected && <section className="card agent-card agent-editor">
-          <div className="agent-card-head"><div><h2>基本設定</h2><p>Agentの名前、説明、タグを管理します。</p></div>
-            {!draft && <button className="agent-button" type="button" onClick={() => edit()}>{savedDraft ? "ドラフトを編集" : "アクティブ版から編集"}</button>}
-          </div>
-          <form onSubmit={(event) => { event.preventDefault(); save(); }}>
-            <div className="agent-fields">
-              <label htmlFor="agent-name">設定名 <span aria-hidden="true">*</span></label>
-              <input id="agent-name" required maxLength={100} readOnly={!draft} value={value.name} onChange={(event) => update({ name: event.target.value })} />
-              <label htmlFor="agent-description">説明</label>
-              <textarea id="agent-description" maxLength={1000} readOnly={!draft} value={value.description} onChange={(event) => update({ description: event.target.value })} />
-              <span>タグ</span>
-              <div className="agent-tags">{value.tags.map((text) => <span key={text}>{text}{draft && <button type="button" aria-label={`${text}を削除`} onClick={() => update({ tags: draft.tags.filter((item) => item !== text) })}><X size={13} /></button>}</span>)}
-                {draft && <div className="agent-tag-input"><input aria-label="新しいタグ" maxLength={30} value={tag} onChange={(event) => setTag(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addTag(); } }} />
-                  <button type="button" className="agent-button" onClick={addTag} disabled={!tag.trim() || draft.tags.includes(tag.trim())}><Plus size={15} /> 追加</button></div>}
-              </div>
-            </div>
-            <div className="agent-structure">
-              <h2>主要な構成（サマリー）</h2>
-              <div className="agent-summary">{categories.map(({ title, icon: Icon, lines }) => <button key={title} type="button" onClick={() => setCategory(title)}>
-                <span className="icon blue"><Icon size={22} /></span><span><strong>{title}</strong>{(title === "LLM" ? [value.llm.model, `Temperature ${value.llm.temperature} / 最大 ${Number(value.llm.maxTokens).toLocaleString("ja-JP")}トークン`] : lines).map((line) => <span key={line}>{line}</span>)}</span>
-              </button>)}</div>
-            </div>
-            <div className="agent-actions">
-              <p role="status">{message || (draft ? "ドラフトを編集中です。" : savedDraft ? "ドラフトを表示中です。再読み込みすると消えます。" : "現在のアクティブ版を表示しています。")}</p>
-              {draft && <>
-                <button className="agent-button" type="button" onClick={() => { setDraft(savedDraft ?? basics(active)); setTag(""); setMessage("変更をリセットしました。"); }}><RotateCcw size={15} /> リセット</button>
-                <button className="agent-button agent-primary" type="submit"><Save size={15} /> ドラフトとして保存</button>
-              </>}
-            </div>
-          </form>
-        </section>}
-        {tab === "設定" && selected && <section className="card agent-card"><h2>{selected.title}</h2>
-          <ul>{selected.lines.map((line) => <li key={line}>{line}</li>)}</ul>
-          <button type="button" className="agent-button" onClick={() => setCategory("基本設定")}>基本設定に戻る</button>
-        </section>}
-        {tab === "バージョン履歴" && <section className="card agent-card"><h2>バージョン履歴</h2>{history}</section>}
-        {tab === "比較" && <section className="card agent-card"><h2>設定の差分</h2><p>{source} → {target}</p>
-          {differences.length === 0 ? <p>設定に差分はありません。</p> : <dl className="agent-diff">
-            {differences.map(([label, before, after]) => <div key={label}><dt>{label}</dt><dd><del>{before || "（空）"}</del><ins>{after || "（空）"}</ins></dd></div>)}
-          </dl>}
-        </section>}
-        {tab === "実験（A/Bテスト）" && <section className="card agent-card"><h2>実験（A/Bテスト）</h2><p><Link href="/experiments">実験結果を開く →</Link></p></section>}
-      </div>
-
-      <div className="agent-stack">
-        <section className="card agent-card"><h2>設定の適用</h2>
-          <div className="agent-apply"><Check size={16} /> 適用対象は新規セッションのみ</div>
-          <button className="agent-button agent-full" type="button" disabled><Rocket size={17} /> アクティブに昇格</button>
-          <p>モックのため、実行環境への適用はできません。</p>
-        </section>
-        <section className="card agent-card">
-          <div className="agent-card-head"><h2>バージョン履歴</h2><button className="agent-link" type="button" onClick={() => setTab("バージョン履歴")}>すべて見る →</button></div>
-          {history}
-        </section>
-        <section className="card agent-card">
-          <h2>設定の比較</h2>
-          <div className="agent-compare">
-            <label>比較元<select value={source} onChange={(event) => setSource(event.target.value)}>{choices.map(({ id }) => <option key={id}>{id}</option>)}</select></label>
-            <button type="button" className="agent-button" aria-label="比較元と比較先を入れ替える" onClick={() => { setSource(target); setTarget(source); }}><ArrowLeftRight size={17} /></button>
-            <label>比較先<select value={target} onChange={(event) => setTarget(event.target.value)}>{choices.map(({ id }) => <option key={id}>{id}</option>)}</select></label>
-          </div>
-          <button className="agent-button agent-full" type="button" onClick={() => setTab("比較")}>差分を表示</button>
-        </section>
-      </div>
-    </div>
+    <header className="agent-header"><div className="heading"><div className="home"><Bot size={29} /></div><div><h1>Agent設定</h1><p>設定は保存後、新しいセッションに反映されます。</p></div></div></header>
+    <nav className="agent-tabs" aria-label="設定カテゴリ">{sections.map(name => <button type="button" key={name} aria-pressed={section === name} onClick={() => { setSection(name); setMessage(""); }}>{name}</button>)}</nav>
+    <div className="llm-grid"><div className="agent-stack">
+      {section === "LLM" && <section className="card agent-card"><h2>LLM設定</h2><p>プロバイダー: OpenRouter</p><form action={submit} className="agent-live-form"><input type="hidden" name="section" value="model" /><label>モデル<select name="model" defaultValue={settings.model}>{!modelOptions.includes(settings.model) && <option value={settings.model} disabled>{settings.model}（現在の設定）</option>}{modelOptions.map(model => <option key={model}>{model}</option>)}</select></label>{button}</form></section>}
+      {section === "プロンプト" && <section className="card agent-card"><h2>システムプロンプト</h2><p>通常の音声・テキストセッションに適用されます。秘書モードは専用プロンプトを使用します。</p><form action={submit} className="agent-live-form"><input type="hidden" name="section" value="prompt" /><label>プロンプト<textarea name="prompt" required maxLength={100000} rows={22} defaultValue={settings.prompt} /></label>{button}</form></section>}
+      {(section === "ツール" || section === "プロンプト") && <section className="card agent-card"><h2>ツール</h2><p>実際に利用できるツールは、モードと接続設定にも依存します。外部操作の承認は維持されます。</p><form action={submit} className="agent-live-form"><input type="hidden" name="section" value="tools" />{Object.entries(toolLabels).map(([name, label]) => <label className="agent-tool" key={name}><input type="checkbox" name="enabled" value={name} defaultChecked={!settings.disabled_tools.includes(name)} />{label} <small>{name}</small></label>)}{button}</form></section>}
+      {section === "RAG" && <section className="card agent-card"><h2>RAG設定</h2><form action={submit} className="agent-live-form"><input type="hidden" name="section" value="rag" /><label>取得件数<input name="top_k" type="number" min="1" max="50" defaultValue={settings.rag.top_k} required /></label><label>類似度の下限<input name="similarity_threshold" type="number" min="0" max="1" step="0.01" defaultValue={settings.rag.similarity_threshold} required /></label><label>チャンクサイズ<input name="chunk_size" type="number" min="100" max="4000" defaultValue={settings.rag.chunk_size} required /></label><label>チャンクの重なり<input name="chunk_overlap" type="number" min="0" max="2000" defaultValue={settings.rag.chunk_overlap} required /></label><p>チャンク設定は新しく取り込む文書に適用されます。既存文書は自動で再取り込みされません。</p>{button}</form></section>}
+      {section === "メモリ" && <section className="card agent-card"><h2>長期メモリ</h2>{memory ? <><dl className="evaluator-summary">{Object.entries(memory.counts).map(([name, count]) => <div key={name}><dt>{name}</dt><dd>{count} 件</dd></div>)}</dl><h2>最近の履歴</h2>{memory.history.length ? <ul>{memory.history.map((item, i) => <li key={i}>{item.action} · {new Intl.DateTimeFormat("ja-JP", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Tokyo" }).format(new Date(item.created_at))} JST</li>)}</ul> : <p>履歴はありません。</p>}</> : <p>PostgreSQL のメモリ情報を取得できません。DB 接続設定と起動状態を確認してください。</p>}</section>}
+      {section === "ハーネス" && <section className="card agent-card"><h2>ハーネス設定</h2><form action={submit} className="agent-live-form"><input type="hidden" name="section" value="harness" /><label className="agent-tool"><input type="checkbox" name="memory_enabled" defaultChecked={settings.harness.memory_enabled} />長期メモリを有効にする</label><label className="agent-tool"><input type="checkbox" name="rag_enabled" defaultChecked={settings.harness.rag_enabled} />RAG を有効にする</label><label>プロンプトに追加する最近のメモリ件数<input type="number" name="memory_prompt_recent_limit" min="1" max="5" defaultValue={settings.harness.memory_prompt_recent_limit} required /></label><label>音声認識モデル（STT）<input name="stt_model" maxLength={150} defaultValue={settings.harness.stt_model} /></label><label>音声合成モデル（TTS）<input name="tts_model" maxLength={150} defaultValue={settings.harness.tts_model} /></label><label>音声（Voice）<input name="tts_voice" maxLength={150} defaultValue={settings.harness.tts_voice} /></label><p>音声設定は3項目すべてを入力、またはすべて空にしてください。認証情報は実行環境で管理します。</p>{button}</form></section>}
+      <p role="status">{message}</p>
+    </div><div className="agent-stack">{section === "LLM" && <section className="card agent-card"><h2>モデルの比較</h2><p>過去365日の Langfuse 実測値。評価条件やセッション数は異なります。</p>{comparisons ? <div className="table-wrap"><table><thead><tr><th>モデル</th><th>生成数</th><th>評価平均</th><th>平均時間</th><th>平均出力コスト</th></tr></thead><tbody>{comparisons.map(row => <tr key={row.model}><td>{row.model}</td><td>{row.count}</td><td>{row.score?.toFixed(2) ?? "N/A"}</td><td>{row.latency == null ? "N/A" : `${row.latency.toFixed(2)} 秒`}</td><td>{row.cost == null ? "N/A" : `$${row.cost.toFixed(5)}`}</td></tr>)}</tbody></table></div> : <p>Langfuse の比較データを取得できません。</p>}<p>評価はトレースに紐づく DeepEval の平均、出力コストは計測済み応答の平均です。</p></section>}</div></div>
   </main>;
 }

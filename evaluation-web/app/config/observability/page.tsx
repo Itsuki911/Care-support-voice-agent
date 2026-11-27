@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { Activity, ClipboardCheck, LockKeyhole } from "lucide-react";
 import Sidebar from "../../sidebar";
+import { checkLangfuseConnection } from "../../dashboard-data";
 import "../../observation-list.css";
 import "../evaluator/evaluator.css";
 
+export const dynamic = "force-dynamic";
 export const metadata = { title: "観測設定 | Voice Agent Lab" };
 
 const settings = [
@@ -22,7 +24,9 @@ const fixed = [
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function ObservabilityPage({ searchParams }: { searchParams: SearchParams }) {
-  const params = await searchParams;
+  const [params, connection] = await Promise.all([searchParams, checkLangfuseConnection()]);
+  const status = { connected: "接続済み", not_configured: "接続設定が未設定または不正です", unauthorized: "認証またはアクセス権を確認してください", unavailable: "接続確認に失敗しました" }[connection.state];
+  const checkedAt = new Intl.DateTimeFormat("ja-JP", { timeZone: "Asia/Tokyo", dateStyle: "short", timeStyle: "medium" }).format(new Date(connection.checkedAt));
   const preview = params.preview === "1";
   const fields = settings.map((setting) => ({
     ...setting,
@@ -38,7 +42,7 @@ export default async function ObservabilityPage({ searchParams }: { searchParams
         <div className="heading"><span className="home"><Activity size={27} /></span><div>
           <h1>観測設定</h1><p>トレースの取得率、ログレベル、保持期間を確認します。</p>
         </div></div>
-        <div className="environment">環境 <strong>Development</strong><span>モックデータ</span></div>
+        <div className="environment">環境 <strong>Development</strong><span>設定プレビュー</span></div>
       </header>
       <div className="content">
         <div className="evaluator-grid">
@@ -70,7 +74,9 @@ export default async function ObservabilityPage({ searchParams }: { searchParams
             </section>
             <section className="card panel">
               <h2>接続状況</h2>
-              <dl className="evaluator-summary"><div><dt>Langfuse</dt><dd>未接続（モック）</dd></div><div><dt>最終同期</dt><dd>N/A</dd></div></dl>
+              <dl className="evaluator-summary"><div><dt>Langfuse</dt><dd>{status}</dd></div><div><dt>確認日時（JST）</dt><dd>{checkedAt}</dd></div></dl>
+              <p className="evaluator-caption">観測データの読み取り API に接続して確認します。データの同期時刻ではありません。</p>
+              <div className="observation-filter-actions"><Link href="/config/observability">接続を再確認</Link></div>
             </section>
           </div>
         </div>

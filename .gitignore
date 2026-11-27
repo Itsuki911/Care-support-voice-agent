@@ -5,3 +5,7 @@
 export/secretary_transcripts/
 export/session_transcripts/
 export/evaluation_reports/auto_eval.log
+
+# Local settings from Agent settings screen
+Test-LiveKit/.agent-runtime-config.json
+Test-LiveKit/.agent-runtime-config.json.*

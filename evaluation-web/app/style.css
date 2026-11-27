@@ -33,7 +33,16 @@ h1 { font-size: 23px; }
 .tabs { display: flex; flex-wrap: wrap; gap: 10px; }
 .tabs button { cursor: pointer; color: inherit; }
 .tabs button[aria-pressed="true"] { background: #314568; color: white; border-color: #314568; }
-.date { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+.date { display: flex; align-items: center; gap: 9px; font-size: 13px; color: inherit; cursor: pointer; }
+.date-picker { position: relative; }
+.date-popover { position: absolute; right: 0; top: calc(100% + 8px); z-index: 10; width: min(300px, calc(100vw - 32px)); padding: 16px; display: grid; gap: 12px; background: white; border: 1px solid #d7deea; border-radius: 10px; box-shadow: 0 8px 24px #13295524; }
+.date-popover label { display: grid; gap: 5px; font-size: 13px; }
+.date-popover input { width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; color: inherit; background: white; }
+.date-popover p { color: #b42318; font-size: 12px; }
+.date-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.date-actions button { border: 1px solid #d7deea; border-radius: 6px; padding: 7px 12px; background: white; cursor: pointer; }
+.date-actions button[type="submit"] { background: #314568; border-color: #314568; color: white; }
+.date-actions button:disabled { opacity: .5; cursor: not-allowed; }
 .metrics, .panels { display: grid; gap: 16px; }
 .metrics { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 18px; }
 .panels { grid-template-columns: minmax(0, 1.37fr) minmax(0, 1fr); }

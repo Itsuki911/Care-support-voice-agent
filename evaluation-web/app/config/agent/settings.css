@@ -109,3 +109,10 @@
 @media (max-width: 560px) {
   .llm-advanced-grid { grid-template-columns: minmax(0, 1fr); }
 }
+.agent-live-form { display: grid; gap: 12px; margin-top: 16px; }
+.agent-live-form label:not(.agent-tool) { display: grid; gap: 6px; }
+.agent-live-form input:not([type="checkbox"]), .agent-live-form select, .agent-live-form textarea { width: 100%; padding: 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #142643; font: inherit; }
+.agent-live-form textarea { resize: vertical; }
+.agent-live-form button { justify-self: start; }
+.agent-tool { display: flex; align-items: center; gap: 8px; }
+.agent-tool small { color: #66758a; }

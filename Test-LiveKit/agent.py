@@ -14,7 +14,7 @@ import json
 import logging
 import os
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 # .env に置いた API キーやモデル名を Python の環境変数として読み込む。
@@ -31,8 +31,10 @@ from memory.models.memory import ConversationMessage
 from memory.observability import MemoryTracer
 from memory_tools import MemoryTools, format_recent_memories_for_prompt
 from observability import _allow_pii, flush_traces, setup_langfuse
-from prompt_config import load_prompt
-from rag.factory import RAGRuntime, create_rag_runtime
+from prompt_config import load_prompt, Prompt
+from hashlib import sha256
+from agent_runtime_config import load_runtime_config
+from rag.factory import RAGRuntime, RAGSettings, create_rag_runtime
 from rag.livekit_adapter import RAGTools
 from rag.observability import RAGTracer
 from session_monitor import SessionMonitor
@@ -121,6 +123,7 @@ class TerminalAssistant(Agent):
         rag_tools: RAGTools | None = None,
         web_search_tools: WebSearchTools | None = None,
         secretary_tools: SecretaryTools | None = None,
+        disabled_tools: set[str] | None = None,
     ) -> None:
         if instructions is not None:
             prompt_text = instructions
@@ -145,15 +148,17 @@ class TerminalAssistant(Agent):
                 tools.append(rag_tools.search_documents)
             if web_search_tools is not None:
                 tools.append(web_search_tools.search_web)
+        disabled_tools = disabled_tools or set()
+        tools = [tool for tool in tools if getattr(tool, "__name__", None) not in disabled_tools and getattr(getattr(tool, "__func__", None), "__name__", None) not in disabled_tools]
         super().__init__(
             tools=tools,
             instructions=prompt_text,
         )
 
 
-def _init_memory_runtime(tracer: MemoryTracer | None = None) -> MemoryRuntime | None:
+def _init_memory_runtime(tracer: MemoryTracer | None = None, *, enabled: bool | None = None) -> MemoryRuntime | None:
     """Create MemoryRuntime when DATABASE_URL is configured; degrade gracefully otherwise."""
-    if os.getenv("MEMORY_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}:
+    if enabled is False or (enabled is None and os.getenv("MEMORY_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}):
         return None
     if not os.getenv("DATABASE_URL", "").strip():
         return None
@@ -170,14 +175,20 @@ def _init_rag_runtime(
     tracer: RAGTracer | None = None,
     *,
     memory_runtime: MemoryRuntime | None = None,
+    settings_override: dict | None = None,
+    enabled: bool | None = None,
 ) -> RAGRuntime | None:
     """Create RAGRuntime when DATABASE_URL is configured; degrade gracefully otherwise."""
-    if os.getenv("RAG_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}:
+    if enabled is False or (enabled is None and os.getenv("RAG_ENABLED", "true").strip().lower() in {"0", "false", "no", "off"}):
         return None
     if not os.getenv("DATABASE_URL", "").strip():
         return None
     try:
+        rag_settings = RAGSettings.from_env()
+        if settings_override:
+            rag_settings = replace(rag_settings, **{ {"top_k": "default_top_k"}.get(k, k): v for k, v in settings_override.items() })
         return create_rag_runtime(
+            rag_settings,
             db=memory_runtime.db if memory_runtime is not None else None,
             embedding_provider=(
                 memory_runtime.embedding_provider if memory_runtime is not None else None
@@ -222,7 +233,16 @@ server = AgentServer()
 async def entrypoint(ctx: JobContext) -> None:
     """LiveKit のルームまたはローカル console 用に、1 会話セッションを作る。"""
     settings = Settings.from_env()
+    runtime_config = load_runtime_config()
+    if runtime_config.get("model"):
+        settings = replace(settings, openrouter_model=runtime_config["model"])
+    harness_config = runtime_config.get("harness", {})
+    if any(key in harness_config for key in ("stt_model", "tts_model", "tts_voice")):
+        settings = replace(settings, **{key: harness_config.get(key) or None for key in ("stt_model", "tts_model", "tts_voice")})
     prompt = load_prompt()
+    if runtime_config.get("prompt"):
+        text = runtime_config["prompt"].strip()
+        prompt = Prompt(prompt.version, text, sha256(text.encode()).hexdigest())
     room_name = getattr(ctx.room, "name", "") or "console"
     is_text_session = room_name.startswith("frontend-test-text-")
     is_secretary_session = (
@@ -281,11 +301,11 @@ async def entrypoint(ctx: JobContext) -> None:
     allow_pii = _allow_pii()
     memory_tracer = MemoryTracer(trace_provider, allow_content=allow_pii)
     rag_tracer = RAGTracer(trace_provider, allow_content=allow_pii)
-    memory_runtime = None if is_secretary_session else _init_memory_runtime(memory_tracer)
+    memory_runtime = None if is_secretary_session else _init_memory_runtime(memory_tracer, enabled=runtime_config.get("harness", {}).get("memory_enabled"))
     rag_runtime = (
         None
         if is_secretary_session
-        else _init_rag_runtime(rag_tracer, memory_runtime=memory_runtime)
+        else _init_rag_runtime(rag_tracer, memory_runtime=memory_runtime, settings_override=runtime_config.get("rag"), enabled=runtime_config.get("harness", {}).get("rag_enabled"))
     )
     secretary_db: DatabaseManager | None = None
     if is_secretary_session:
@@ -330,7 +350,7 @@ async def entrypoint(ctx: JobContext) -> None:
             return sec_prompt_path.read_text(encoding="utf-8").strip()
         if memory_runtime is None:
             return prompt.text
-        recent_limit = _prompt_recent_memory_limit()
+        recent_limit = runtime_config.get("harness", {}).get("memory_prompt_recent_limit", _prompt_recent_memory_limit())
         uid = get_memory_user_id()
         with memory_tracer.span(
             "memory.prompt_injection",
@@ -839,6 +859,7 @@ async def entrypoint(ctx: JobContext) -> None:
                 rag_tools=session_rag_tools,
                 web_search_tools=session_web_search_tools,
                 secretary_tools=session_secretary_tools,
+                disabled_tools=set(runtime_config.get("disabled_tools", [])),
             ),
             "room": ctx.room,
         }
